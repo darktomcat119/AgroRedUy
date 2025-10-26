@@ -1,0 +1,334 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .all-\[unset\] {
+    all: unset;
+  }
+}
+
+:root {
+  --barlow-bold-64pt-font-family: "Barlow", Helvetica;
+  --barlow-bold-64pt-font-size: 64px;
+  --barlow-bold-64pt-font-style: normal;
+  --barlow-bold-64pt-font-weight: 700;
+  --barlow-bold-64pt-letter-spacing: 0px;
+  --barlow-bold-64pt-line-height: normal;
+  
+  --barlow-bold-italic-96pt-font-family: "Barlow", Helvetica;
+  --barlow-bold-italic-96pt-font-size: 96px;
+  --barlow-bold-italic-96pt-font-style: italic;
+  --barlow-bold-italic-96pt-font-weight: 700;
+  --barlow-bold-italic-96pt-letter-spacing: 0px;
+  --barlow-bold-italic-96pt-line-height: normal;
+  
+  --barlow-medium-20pt-font-family: "Barlow", Helvetica;
+  --barlow-medium-20pt-font-size: 20px;
+  --barlow-medium-20pt-font-style: normal;
+  --barlow-medium-20pt-font-weight: 500;
+  --barlow-medium-20pt-letter-spacing: 0px;
+  --barlow-medium-20pt-line-height: normal;
+  
+  --blanco-100: rgba(255, 255, 255, 1);
+  --grisprimario-10: rgba(242, 242, 242, 0.1);
+  --grisprimario-100: rgba(242, 242, 242, 1);
+  --grissecundario-100: rgba(200, 200, 200, 1);
+  --naranja-100: rgba(246, 127, 45, 1);
+  --naranja-50: rgba(246, 127, 45, 0.5);
+  --negro-100: rgba(0, 0, 0, 1);
+  --raleway-bold-16pt-font-family: "Raleway", Helvetica;
+  --raleway-bold-16pt-font-size: 16px;
+  --raleway-bold-16pt-font-style: normal;
+  --raleway-bold-16pt-font-weight: 700;
+  --raleway-bold-16pt-letter-spacing: 0px;
+  --raleway-bold-16pt-line-height: normal;
+  --raleway-bold-20pt-font-family: "Raleway", Helvetica;
+  --raleway-bold-20pt-font-size: 20px;
+  --raleway-bold-20pt-font-style: normal;
+  --raleway-bold-20pt-font-weight: 700;
+  --raleway-bold-20pt-letter-spacing: 0px;
+  --raleway-bold-20pt-line-height: normal;
+  --raleway-bold-14pt-font-family: "Raleway", Helvetica;
+  --raleway-bold-14pt-font-size: 14px;
+  --raleway-bold-14pt-font-style: normal;
+  --raleway-bold-14pt-font-weight: 700;
+  --raleway-bold-14pt-letter-spacing: 0px;
+  --raleway-bold-14pt-line-height: normal;
+  --raleway-medium-14pt-font-family: "Raleway", Helvetica;
+  --raleway-medium-14pt-font-size: 14px;
+  --raleway-medium-14pt-font-style: normal;
+  --raleway-medium-14pt-font-weight: 500;
+  --raleway-medium-14pt-letter-spacing: 0px;
+  --raleway-medium-14pt-line-height: normal;
+  --raleway-medium-16pt-font-family: "Raleway", Helvetica;
+  --raleway-medium-16pt-font-size: 16px;
+  --raleway-medium-16pt-font-style: normal;
+  --raleway-medium-16pt-font-weight: 500;
+  --raleway-medium-16pt-letter-spacing: 0px;
+  --raleway-medium-16pt-line-height: normal;
+  --raleway-regular-20pt-font-family: "Raleway", Helvetica;
+  --raleway-regular-20pt-font-size: 20px;
+  --raleway-regular-20pt-font-style: normal;
+  --raleway-regular-20pt-font-weight: 400;
+  --raleway-regular-20pt-letter-spacing: 0px;
+  --raleway-regular-20pt-line-height: normal;
+  --raleway-semibold-italic-20pt-font-family: "Raleway", Helvetica;
+  --raleway-semibold-italic-20pt-font-size: 20px;
+  --raleway-semibold-italic-20pt-font-style: italic;
+  --raleway-semibold-italic-20pt-font-weight: 600;
+  --raleway-semibold-italic-20pt-letter-spacing: 0px;
+  --raleway-semibold-italic-20pt-line-height: normal;
+  --verdeprimario-100: rgba(45, 131, 65, 1);
+  --verdeprimario-60: rgba(45, 131, 65, 0.6);
+  --verdesecundario-100: rgba(96, 166, 70, 1);
+}
+
+:root {
+  --animate-spin: spin 1s linear infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-fade-up {
+  animation: fade-up 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-marquee {
+  animation: marquee var(--duration) infinite linear;
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical var(--duration) linear infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 8s infinite;
+}
+
+.animate-spin {
+  animation: var(--animate-spin);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes image-glow {
+  0% {
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.74, 0.25, 0.76, 1);
+  }
+
+  10% {
+    opacity: 0.7;
+    animation-timing-function: cubic-bezier(0.12, 0.01, 0.08, 0.99);
+  }
+
+  to {
+    opacity: 0.4;
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  0%,
+  90%,
+  to {
+    background-position: calc(-100% - var(--shimmer-width)) 0;
+  }
+
+  30%,
+  60% {
+    background-position: calc(100% + var(--shimmer-width)) 0;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translate(0);
+  }
+
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes marquee-vertical {
+  0% {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+
+    --card: transparent;
+    --card-foreground: 222.2 47.4% 11.2%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 210 40% 98%;
+
+    --ring: 215 20.2% 65.1%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 20.2% 65.1%;
+
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+
+    --card: transparent;
+    --card-foreground: 213 31% 91%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 1.2%;
+
+    --secondary: 222.2 47.4% 11.2%;
+    --secondary-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --ring: 216 34% 17%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom Scrollbar Styles */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(45, 131, 65, 0.3) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(45, 131, 65, 0.3);
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(45, 131, 65, 0.5);
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:active {
+    background: rgba(45, 131, 65, 0.7);
+  }
+}
+
+/* Force custom scrollbar on dropdown containers */
+.dropdown-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(45, 131, 65, 0.3) transparent;
+}
+
+.dropdown-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dropdown-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.dropdown-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(45, 131, 65, 0.3);
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+.dropdown-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 131, 65, 0.5);
+}
+
+.dropdown-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(45, 131, 65, 0.7);
+}
+
