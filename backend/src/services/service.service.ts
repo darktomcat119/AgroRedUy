@@ -4,7 +4,7 @@ import { logger } from '../config/logger';
 export interface CreateServiceData {
   title: string;
   description: string;
-  pricePerHour: number;
+  price: number;
   priceMin?: number;
   priceMax?: number;
   latitude: number;
@@ -13,13 +13,14 @@ export interface CreateServiceData {
   city: string;
   department: string;
   categoryId: string;
+  unit_id: string;
   userId: string;
 }
 
 export interface UpdateServiceData {
   title?: string;
   description?: string;
-  pricePerHour?: number;
+  price?: number;
   priceMin?: number;
   priceMax?: number;
   latitude?: number;
@@ -48,7 +49,7 @@ export interface ServiceWithDetails {
   id: string;
   title: string;
   description: string;
-  pricePerHour: number;
+  price: number;
   priceMin?: number;
   priceMax?: number;
   latitude: number;
@@ -98,7 +99,7 @@ export class ServiceService {
         data: {
           title: data.title,
           description: data.description,
-          pricePerHour: data.pricePerHour,
+          price: data.price,
           priceMin: data.priceMin,
           priceMax: data.priceMax,
           latitude: data.latitude,
@@ -107,6 +108,7 @@ export class ServiceService {
           city: data.city,
           department: data.department,
           categoryId: data.categoryId,
+          unit_id: data.unit_id,
           userId: data.userId
         },
         include: {
@@ -171,11 +173,11 @@ export class ServiceService {
       }
 
       if (filters.minPrice !== undefined) {
-        where.pricePerHour = { gte: filters.minPrice };
+        where.price = { gte: filters.minPrice };
       }
 
       if (filters.maxPrice !== undefined) {
-        where.pricePerHour = { ...where.pricePerHour, lte: filters.maxPrice };
+        where.price = { ...where.price, lte: filters.maxPrice };
       }
 
       if (filters.isActive !== undefined) {

@@ -63,7 +63,7 @@ export class AuthService {
     this.emailService = new EmailService();
   }
 
-  async register(userData: RegisterData): Promise<AuthResult> {
+  async register(registerData: RegisterData): Promise<AuthResult> {
     try {
       const { 
         email, 
@@ -80,7 +80,7 @@ export class AuthService {
         company,
         interests = [],
         newsletter = false
-      } = userData;
+      } = registerData;
 
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
@@ -98,28 +98,40 @@ export class AuthService {
       const emailVerificationToken = this.generateEmailVerificationToken();
       const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
+      // Prepare user data for database
+      const dbUserData = {
+        email,
+        passwordHash,
+        firstName,
+        lastName,
+        phone,
+        address: address && address.trim() !== '' ? address : null,
+        city: city && city.trim() !== '' ? city : null,
+        department: department && department.trim() !== '' ? department : null,
+        dateOfBirth: dateOfBirth && dateOfBirth.trim() !== '' ? new Date(dateOfBirth) : null,
+        gender: gender && gender.trim() !== '' ? gender : null,
+        occupation: occupation && occupation.trim() !== '' ? occupation : null,
+        company: company && company.trim() !== '' ? company : null,
+        interests,
+        newsletter,
+        emailVerificationToken,
+        emailVerificationExpires,
+        emailVerified: false
+      };
+      
+      console.log('Creating user with data:', dbUserData);
+
       // Create user
-      const user = await prisma.user.create({
-        data: {
-          email,
-          passwordHash,
-          firstName,
-          lastName,
-          phone,
-          address: address || null,
-          city: city || null,
-          department: department || null,
-          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-          gender: gender || null,
-          occupation: occupation || null,
-          company: company || null,
-          interests,
-          newsletter,
-          emailVerificationToken,
-          emailVerificationExpires,
-          emailVerified: false
-        } as any
-      });
+      let user;
+      try {
+        user = await prisma.user.create({
+          data: dbUserData as any
+        });
+        console.log('✅ User created successfully:', user.id);
+      } catch (dbError) {
+        console.error('❌ Database error creating user:', dbError);
+        throw dbError;
+      }
 
       // Send verification email (skip in development)
       if (process.env.NODE_ENV === 'production') {
@@ -215,19 +227,26 @@ export class AuthService {
   async login(loginData: LoginData): Promise<AuthResult> {
     try {
       const { email, password } = loginData;
+      
+      console.log('Auth service login attempt:', { email, passwordLength: password?.length });
 
       // Find user
       const user = await prisma.user.findUnique({
         where: { email }
       });
 
+      console.log('User found:', user ? { email: user.email, role: user.role, isActive: user.isActive } : 'null');
+
       if (!user) {
+        console.log('User not found for email:', email);
         throw new Error('Invalid credentials');
       }
 
       // Check password
       const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+      console.log('Password check result:', isPasswordValid);
       if (!isPasswordValid) {
+        console.log('Password invalid for user:', email);
         throw new Error('Invalid credentials');
       }
 

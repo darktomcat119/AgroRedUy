@@ -40,7 +40,7 @@ export interface BookingWithDetails {
     id: string;
     title: string;
     description: string;
-    pricePerHour: number;
+    price: number;
     address: string;
     city: string;
     department: string;
@@ -105,7 +105,7 @@ export class BookingService {
       }
 
       // Calculate total price
-      const totalPrice = Number(availability.service.pricePerHour) * data.durationHours;
+      const totalPrice = Number(availability.service.price) * data.durationHours;
 
       // Create booking
       const booking = await prisma.booking.create({
@@ -153,7 +153,7 @@ export class BookingService {
         totalPrice: Number(booking.totalPrice),
         service: {
           ...booking.service,
-          pricePerHour: Number(booking.service.pricePerHour)
+          price: Number(booking.service.price)
         }
       } as BookingWithDetails;
     } catch (error) {
@@ -205,7 +205,7 @@ export class BookingService {
           totalPrice: Number(booking.totalPrice),
           service: {
             ...booking.service,
-            pricePerHour: Number(booking.service.pricePerHour)
+            price: Number(booking.service.price)
           }
         })) as BookingWithDetails[],
         total,
@@ -258,7 +258,7 @@ export class BookingService {
         totalPrice: Number(booking.totalPrice),
         service: {
           ...booking.service,
-          pricePerHour: Number(booking.service.pricePerHour)
+          price: Number(booking.service.price)
         }
       } as BookingWithDetails;
     } catch (error) {
@@ -331,7 +331,7 @@ export class BookingService {
         totalPrice: Number(booking.totalPrice),
         service: {
           ...booking.service,
-          pricePerHour: Number(booking.service.pricePerHour)
+          price: Number(booking.service.price)
         }
       } as BookingWithDetails;
     } catch (error) {
@@ -444,7 +444,7 @@ export class BookingService {
           totalPrice: Number(booking.totalPrice),
           service: {
             ...booking.service,
-            pricePerHour: Number(booking.service.pricePerHour)
+            price: Number(booking.service.price)
           }
         })) as BookingWithDetails[],
         total,

@@ -6,15 +6,23 @@
 "use client";
 
 import { AdminDashboard } from '@/components/admin/AdminDashboard';
+import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AdminOrSuperAdmin } from '@/components/admin/RoleGuard';
 import { useAuth, useAdminAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { DynamicNavigation } from '@/components/DynamicNavigation';
 
 export default function AdminPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const { isAdmin } = useAdminAuth();
   const router = useRouter();
+
+  // Debug logging
+  console.log('AdminPage - isAuthenticated:', isAuthenticated);
+  console.log('AdminPage - isLoading:', isLoading);
+  console.log('AdminPage - user:', user);
+  console.log('AdminPage - user.role:', user?.role);
+  console.log('AdminPage - isAdmin:', isAdmin);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -25,10 +33,10 @@ export default function AdminPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-grisprimario-10 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-verdeprimario-100 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando...</p>
+          <p className="text-grisprimario-200 font-raleway-medium-16pt">Cargando...</p>
         </div>
       </div>
     );
@@ -40,12 +48,12 @@ export default function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-grisprimario-10 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+          <h1 className="text-2xl font-bold text-negro-100 mb-4 font-raleway-bold-20pt">
             Acceso Denegado
           </h1>
-          <p className="text-gray-600">
+          <p className="text-grisprimario-200 font-raleway-medium-16pt">
             No tienes permisos para acceder a esta página.
           </p>
         </div>
@@ -54,19 +62,12 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DynamicNavigation 
-        leftItems={[
-          { label: "Inicio", active: false, href: "/" },
-          { label: "Servicios", active: false, href: "/servicios" },
-        ]}
-        variant="service"
-      />
-      <div className="py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <AdminOrSuperAdmin>
+      <AdminLayout>
+        <div className="max-w-7xl mx-auto">
           <AdminDashboard />
         </div>
-      </div>
-    </div>
+      </AdminLayout>
+    </AdminOrSuperAdmin>
   );
 }

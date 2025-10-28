@@ -24,6 +24,26 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+export interface AdminServicesResponse {
+  services: any[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  iconUrl?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 class ApiClient {
   private baseURL: string;
   private token: string | null = null;
@@ -95,6 +115,15 @@ class ApiClient {
     firstName: string;
     lastName: string;
     phone?: string;
+    address?: string;
+    city?: string;
+    department?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    occupation?: string;
+    company?: string;
+    interests?: string[];
+    newsletter?: boolean;
   }) {
     return this.request('/auth/register', {
       method: 'POST',
@@ -308,7 +337,7 @@ class ApiClient {
 
   // Admin endpoints
   async getAnalytics() {
-    return this.request<any>('/admin/analytics');
+    return this.request<any>('/admin/statistics');
   }
 
   async getUsers(filters: {
@@ -333,6 +362,22 @@ class ApiClient {
     return this.request<any>(`/admin/users/${id}`);
   }
 
+  async createUser(userData: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    role?: string;
+    isActive?: boolean;
+    emailVerified?: boolean;
+  }) {
+    return this.request<any>('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  }
+
   async updateUser(id: string, userData: any) {
     return this.request<any>(`/admin/users/${id}`, {
       method: 'PUT',
@@ -347,7 +392,7 @@ class ApiClient {
   }
 
   async getAdminServices(filters: {
-    categoryId?: string;
+    category?: string;
     isActive?: boolean;
     search?: string;
     page?: number;
@@ -361,7 +406,149 @@ class ApiClient {
       }
     });
 
-    return this.request<PaginatedResponse<any>>(`/admin/services?${params.toString()}`);
+    return this.request<AdminServicesResponse>(`/admin/services?${params.toString()}`);
+  }
+
+  // Reports API methods
+  async generateReport(reportData: {
+    type: 'user_activity' | 'service_performance' | 'revenue_analysis' | 'booking_trends' | 'contractor_performance';
+    period: 'last_7_days' | 'last_30_days' | 'last_90_days' | 'custom';
+    startDate?: string;
+    endDate?: string;
+    format?: 'json' | 'csv' | 'pdf';
+  }) {
+    return this.request<any>('/admin/reports/generate', {
+      method: 'POST',
+      body: JSON.stringify(reportData),
+    });
+  }
+
+  async getReports(filters: {
+    page?: number;
+    limit?: number;
+    type?: string;
+    status?: string;
+  } = {}) {
+    const params = new URLSearchParams();
+    
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, value.toString());
+      }
+    });
+
+    return this.request<PaginatedResponse<any>>(`/admin/reports?${params.toString()}`);
+  }
+
+  async getReportDetails(id: string) {
+    return this.request<any>(`/admin/reports/${id}`);
+  }
+
+  async deleteReport(id: string) {
+    return this.request(`/admin/reports/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Settings API methods
+  async getSettings() {
+    return this.request<any>('/admin/settings');
+  }
+
+  async updateSettings(category: string, settings: any) {
+    return this.request<any>('/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ category, settings }),
+    });
+  }
+
+  async resetSettings(category: string) {
+    return this.request<any>('/admin/settings/reset', {
+      method: 'POST',
+      body: JSON.stringify({ category }),
+    });
+  }
+
+  async getSystemHealth() {
+    return this.request<any>('/admin/health');
+  }
+
+  // Category Management API methods (SuperAdmin only)
+  async getCategories() {
+    return this.request<Category[]>('/admin/categories');
+  }
+
+  async createCategory(categoryData: {
+    name: string;
+    description?: string;
+    iconUrl?: string;
+  }) {
+    return this.request<Category>('/admin/categories', {
+      method: 'POST',
+      body: JSON.stringify(categoryData)
+    });
+  }
+
+  async updateCategory(id: string, categoryData: {
+    name?: string;
+    description?: string;
+    iconUrl?: string;
+    isActive?: boolean;
+  }) {
+    return this.request<Category>(`/admin/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(categoryData)
+    });
+  }
+
+  async deleteCategory(id: string) {
+    return this.request<void>(`/admin/categories/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Security API methods
+  async getSecurityLogs(filters: {
+    page?: number;
+    limit?: number;
+    level?: string;
+    type?: string;
+    startDate?: string;
+    endDate?: string;
+  } = {}) {
+    const params = new URLSearchParams();
+    
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, value.toString());
+      }
+    });
+
+    return this.request<PaginatedResponse<any>>(`/admin/security/logs?${params.toString()}`);
+  }
+
+  async getSecurityStats(period: string = '7d') {
+    return this.request<any>(`/admin/security/stats?period=${period}`);
+  }
+
+  async blockIpAddress(ipAddress: string, reason: string, duration?: string) {
+    return this.request<any>('/admin/security/block-ip', {
+      method: 'POST',
+      body: JSON.stringify({ ipAddress, reason, duration }),
+    });
+  }
+
+  async unblockIpAddress(ipAddress: string) {
+    return this.request<any>(`/admin/security/unblock-ip/${ipAddress}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async resolveSecurityLog(logId: string, resolution: string, notes?: string) {
+    return this.request<any>(`/admin/security/resolve-log/${logId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ resolution, notes }),
+    });
   }
 
   async getContentManagement() {

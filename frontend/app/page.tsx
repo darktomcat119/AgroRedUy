@@ -1,12 +1,17 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DynamicNavigation } from "@/components/DynamicNavigation";
+import { Navigation } from "@/components/Navigation";
 import Link from "next/link";
 
 const navigationItems = [
   { label: "Inicio", active: true, href: "/" },
   { label: "Servicios", active: false, href: "/servicios" },
+];
+
+const navigationItemsRight = [
+  { label: "Contacto", active: false, href: "/contacto" },
+  { label: "Iniciar Sesión", active: false, href: "/login" },
 ];
 
 const features = [
@@ -62,8 +67,9 @@ export default function HomePage(): JSX.Element {
       {/* Responsive Header */}
       <header className="absolute top-0 left-0 w-full z-20">
         <div className="w-full max-w-7xl mx-auto">
-          <DynamicNavigation
+          <Navigation
             leftItems={navigationItems}
+            rightItems={navigationItemsRight}
             variant="home"
           />
         </div>

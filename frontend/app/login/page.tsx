@@ -196,7 +196,7 @@ export default function LoginPage(): JSX.Element {
       </div>
 
       {/* Right Section - Image */}
-      <div className="flex-1 bg-gradient-to-br from-verdeprimario-100 to-verdesecundario-100 flex items-center justify-center">
+      <div className="flex-1 bg-gradient-to-br from-verdeprimario-100 to-verdesecundario-100 flex items-center justify-center rounded-l-[100px] overflow-hidden">
         <img
           className="w-full h-full object-cover"
           alt="Login illustration"

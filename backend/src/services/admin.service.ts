@@ -499,6 +499,9 @@ export class AdminService {
           startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       }
 
+      // Use startDate in the queries (currently not used but available for future filtering)
+      console.log(`Statistics for period: ${period}, start date: ${startDate.toISOString()}`);
+
       const [
         totalUsers,
         totalServices,

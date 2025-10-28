@@ -1,27 +1,11 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { body, query, param, validationResult } from 'express-validator';
+import { Router } from 'express';
+import { body, query, param } from 'express-validator';
 import { ServiceController } from '../controllers/service.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { validateRequest } from '../middleware/validation.middleware.js';
 
 const router = Router();
 const serviceController = new ServiceController();
-
-// Validation middleware
-const validateRequest = (req: Request, res: Response, next: NextFunction): void => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    res.status(400).json({
-      success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid input data',
-        details: errors.array()
-      }
-    });
-    return;
-  }
-  next();
-};
 
 // GET /services - Get all services with filters
 router.get('/', [

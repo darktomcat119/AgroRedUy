@@ -5,7 +5,8 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
+import { useAuth } from '@/lib/auth';
 import { apiClient } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ interface AnalyticsData {
 }
 
 export function AdminDashboard() {
+  const { user, isAuthenticated } = useAuth();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,9 +74,21 @@ export function AdminDashboard() {
       setIsLoading(true);
       setError(null);
 
+      // Check if user has admin role
+      if (!isAuthenticated || !user) {
+        setError('Debes iniciar sesión para acceder a esta página');
+        return;
+      }
+
+      if (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
+        setError(`No tienes permisos de administrador para acceder a esta página. Tu rol actual es: ${user.role}. Necesitas ser ADMIN o SUPERADMIN para acceder al panel de administración.`);
+        return;
+      }
+
       const response = await apiClient.getAnalytics();
 
       if (response.success && response.data) {
+        console.log('Analytics data received:', response.data);
         setAnalytics(response.data);
         setLastUpdated(new Date());
       } else {
@@ -89,8 +103,13 @@ export function AdminDashboard() {
   };
 
   useEffect(() => {
-    loadAnalytics();
-  }, []);
+    // Only load analytics if user is authenticated and has admin role
+    if (isAuthenticated && user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN')) {
+      loadAnalytics();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, user]);
 
   const handleRefresh = () => {
     loadAnalytics();
@@ -123,6 +142,18 @@ export function AdminDashboard() {
             <AlertCircle className="h-4 w-4" />
             <span>{error}</span>
           </div>
+          
+          {error.includes('No tienes permisos de administrador') && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="font-semibold text-blue-800 mb-2">¿Cómo obtener acceso de administrador?</h3>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Contacta al SUPERADMIN para que te asigne el rol de ADMIN</li>
+                <li>• O crea una cuenta con rol SUPERADMIN directamente</li>
+                <li>• Los roles disponibles son: USER, CONTRACTOR, ADMIN, SUPERADMIN</li>
+              </ul>
+            </div>
+          )}
+          
           <Button
             variant="outline"
             onClick={handleRefresh}
@@ -145,21 +176,21 @@ export function AdminDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Panel de Administración</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-negro-100 font-raleway-bold-20pt">Panel de Administración</h1>
+          <p className="text-grisprimario-200 font-raleway-medium-16pt">
             Estadísticas y gestión de la plataforma AgroRedUy
           </p>
         </div>
         <div className="flex items-center gap-4">
           {lastUpdated && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-grisprimario-200 font-raleway-medium-14pt">
               Actualizado: {lastUpdated.toLocaleTimeString()}
             </p>
           )}
           <Button
             variant="outline"
             onClick={handleRefresh}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-verdeprimario-100 text-blanco-100 hover:bg-verdeprimario-200 border-verdeprimario-100 rounded-full font-raleway-medium-16pt"
           >
             <RefreshCw className="h-4 w-4" />
             Actualizar
@@ -171,12 +202,12 @@ export function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Usuarios Totales</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-negro-100 font-raleway-bold-16pt">Usuarios Totales</CardTitle>
+            <Users className="h-4 w-4 text-grisprimario-200" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(analytics.totalUsers)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-negro-100 font-raleway-bold-20pt">{formatNumber(analytics.totalUsers)}</div>
+            <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">
               {analytics.activeUsers} activos
             </p>
           </CardContent>
@@ -184,12 +215,12 @@ export function AdminDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Servicios Totales</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-negro-100 font-raleway-bold-16pt">Servicios Totales</CardTitle>
+            <Briefcase className="h-4 w-4 text-grisprimario-200" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(analytics.totalServices)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-negro-100 font-raleway-bold-20pt">{formatNumber(analytics.totalServices)}</div>
+            <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">
               {analytics.activeServices} activos
             </p>
           </CardContent>
@@ -197,12 +228,12 @@ export function AdminDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reservas Totales</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-negro-100 font-raleway-bold-16pt">Reservas Totales</CardTitle>
+            <Calendar className="h-4 w-4 text-grisprimario-200" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(analytics.totalBookings)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-negro-100 font-raleway-bold-20pt">{formatNumber(analytics.totalBookings)}</div>
+            <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">
               {analytics.completedBookings} completadas
             </p>
           </CardContent>
@@ -210,12 +241,12 @@ export function AdminDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-negro-100 font-raleway-bold-16pt">Ingresos Totales</CardTitle>
+            <DollarSign className="h-4 w-4 text-grisprimario-200" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(analytics.totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-negro-100 font-raleway-bold-20pt">{formatCurrency(analytics.totalRevenue)}</div>
+            <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">
               Promedio: {formatCurrency(analytics.totalRevenue / Math.max(analytics.totalBookings, 1))}
             </p>
           </CardContent>
@@ -227,10 +258,10 @@ export function AdminDashboard() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-yellow-600" />
+              <Clock className="h-5 w-5 text-naranja-100" />
               <div>
-                <p className="text-sm font-medium text-gray-600">Pendientes</p>
-                <p className="text-2xl font-bold text-yellow-600">{analytics.pendingBookings}</p>
+                <p className="text-sm font-medium text-negro-100 font-raleway-bold-16pt">Pendientes</p>
+                <p className="text-2xl font-bold text-naranja-100 font-raleway-bold-20pt">{analytics.pendingBookings || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -239,10 +270,10 @@ export function AdminDashboard() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-blue-600" />
+              <CheckCircle className="h-5 w-5 text-verdeprimario-100" />
               <div>
-                <p className="text-sm font-medium text-gray-600">Confirmadas</p>
-                <p className="text-2xl font-bold text-blue-600">{analytics.confirmedBookings}</p>
+                <p className="text-sm font-medium text-negro-100 font-raleway-bold-16pt">Confirmadas</p>
+                <p className="text-2xl font-bold text-verdeprimario-100 font-raleway-bold-20pt">{analytics.confirmedBookings || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -251,10 +282,10 @@ export function AdminDashboard() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              <CheckCircle className="h-5 w-5 text-verdesecundario-100" />
               <div>
-                <p className="text-sm font-medium text-gray-600">Completadas</p>
-                <p className="text-2xl font-bold text-green-600">{analytics.completedBookings}</p>
+                <p className="text-sm font-medium text-negro-100 font-raleway-bold-16pt">Completadas</p>
+                <p className="text-2xl font-bold text-verdesecundario-100 font-raleway-bold-20pt">{analytics.completedBookings || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -263,10 +294,10 @@ export function AdminDashboard() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
+              <AlertCircle className="h-5 w-5 text-negro-100" />
               <div>
-                <p className="text-sm font-medium text-gray-600">Canceladas</p>
-                <p className="text-2xl font-bold text-red-600">{analytics.cancelledBookings}</p>
+                <p className="text-sm font-medium text-negro-100 font-raleway-bold-16pt">Canceladas</p>
+                <p className="text-2xl font-bold text-negro-100 font-raleway-bold-20pt">{analytics.cancelledBookings || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -278,65 +309,77 @@ export function AdminDashboard() {
         {/* Top Categories */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-negro-100 font-raleway-bold-16pt">
               <TrendingUp className="h-5 w-5" />
               Categorías Más Populares
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-grisprimario-200 font-raleway-medium-14pt">
               Categorías con más servicios registrados
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {analytics.topCategories.map((category, index) => (
-                <div key={category.categoryId} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="w-6 h-6 flex items-center justify-center text-xs">
-                      {index + 1}
-                    </Badge>
-                    <span className="font-medium">{category.categoryName}</span>
+            {(analytics.topCategories || []).length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-grisprimario-200 font-raleway-medium-16pt">No hay categorías disponibles</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {(analytics.topCategories || []).map((category, index) => (
+                  <div key={`category-${index}`} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="w-6 h-6 flex items-center justify-center text-xs">
+                        {index + 1}
+                      </Badge>
+                      <span className="font-medium text-negro-100 font-raleway-bold-16pt">{category.categoryName}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-negro-100 font-raleway-bold-16pt">{category.serviceCount}</p>
+                      <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">servicios</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">{category.serviceCount}</p>
-                    <p className="text-xs text-gray-500">servicios</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Top Services */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-negro-100 font-raleway-bold-16pt">
               <Star className="h-5 w-5" />
               Servicios Más Reservados
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-grisprimario-200 font-raleway-medium-14pt">
               Servicios con más reservas y ingresos
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {analytics.topServices.map((service, index) => (
-                <div key={service.serviceId} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="w-6 h-6 flex items-center justify-center text-xs">
-                      {index + 1}
-                    </Badge>
-                    <div>
-                      <p className="font-medium text-sm">{service.serviceTitle}</p>
-                      <p className="text-xs text-gray-500">{service.bookingCount} reservas</p>
+            {(analytics.topServices || []).length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-grisprimario-200 font-raleway-medium-16pt">No hay servicios disponibles</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {(analytics.topServices || []).map((service, index) => (
+                  <div key={`service-${index}`} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="w-6 h-6 flex items-center justify-center text-xs">
+                        {index + 1}
+                      </Badge>
+                      <div>
+                        <p className="font-medium text-sm text-negro-100 font-raleway-bold-16pt">{service.serviceTitle}</p>
+                        <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">{service.bookingCount} reservas</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-negro-100 font-raleway-bold-16pt">{formatCurrency(service.totalRevenue)}</p>
+                      <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">ingresos</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">{formatCurrency(service.totalRevenue)}</p>
-                    <p className="text-xs text-gray-500">ingresos</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -345,64 +388,178 @@ export function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-negro-100 font-raleway-bold-16pt">
               <TrendingUp className="h-5 w-5" />
               Crecimiento de Usuarios
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-grisprimario-200 font-raleway-medium-14pt">
               Últimos 30 días
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Gráfico de crecimiento</p>
-              <p className="text-sm text-gray-500">
-                {analytics.userGrowth.length} puntos de datos
-              </p>
-            </div>
+            {(analytics.userGrowth || []).length === 0 ? (
+              <div className="text-center py-8">
+                <TrendingUp className="h-12 w-12 text-grisprimario-200 mx-auto mb-4" />
+                <p className="text-grisprimario-200 font-raleway-medium-16pt">No hay datos disponibles</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-naranja-100 font-raleway-bold-20pt">
+                      {analytics.userGrowth[analytics.userGrowth.length - 1]?.count || 0}
+                    </p>
+                    <p className="text-sm text-grisprimario-200 font-raleway-medium-14pt">Usuarios totales</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-verdeprimario-100 font-raleway-bold-16pt">
+                      +{analytics.userGrowth[analytics.userGrowth.length - 1]?.count - analytics.userGrowth[0]?.count || 0}
+                    </p>
+                    <p className="text-sm text-grisprimario-200 font-raleway-medium-14pt">Crecimiento</p>
+                  </div>
+                </div>
+                <div className="flex items-end justify-between h-20 gap-2">
+                  {analytics.userGrowth.map((point, index) => {
+                    const maxCount = Math.max(...analytics.userGrowth.map(p => p.count));
+                    const height = (point.count / maxCount) * 100;
+                    return (
+                      <div key={index} className="flex flex-col items-center flex-1">
+                        <div 
+                          className="bg-naranja-100 rounded-t w-full transition-all duration-300 hover:bg-naranja-200"
+                          style={{ height: `${height}%` }}
+                        />
+                        <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt mt-1">
+                          {point.count}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">
+                    Últimos {(analytics.userGrowth || []).length} períodos
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-negro-100 font-raleway-bold-16pt">
               <Briefcase className="h-5 w-5" />
               Crecimiento de Servicios
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-grisprimario-200 font-raleway-medium-14pt">
               Últimos 30 días
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Gráfico de servicios</p>
-              <p className="text-sm text-gray-500">
-                {analytics.serviceGrowth.length} puntos de datos
-              </p>
-            </div>
+            {(analytics.serviceGrowth || []).length === 0 ? (
+              <div className="text-center py-8">
+                <Briefcase className="h-12 w-12 text-grisprimario-200 mx-auto mb-4" />
+                <p className="text-grisprimario-200 font-raleway-medium-16pt">No hay datos disponibles</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-verdeprimario-100 font-raleway-bold-20pt">
+                      {analytics.serviceGrowth[analytics.serviceGrowth.length - 1]?.count || 0}
+                    </p>
+                    <p className="text-sm text-grisprimario-200 font-raleway-medium-14pt">Servicios totales</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-verdeprimario-100 font-raleway-bold-16pt">
+                      +{analytics.serviceGrowth[analytics.serviceGrowth.length - 1]?.count - analytics.serviceGrowth[0]?.count || 0}
+                    </p>
+                    <p className="text-sm text-grisprimario-200 font-raleway-medium-14pt">Crecimiento</p>
+                  </div>
+                </div>
+                <div className="flex items-end justify-between h-20 gap-2">
+                  {analytics.serviceGrowth.map((point, index) => {
+                    const maxCount = Math.max(...analytics.serviceGrowth.map(p => p.count));
+                    const height = (point.count / maxCount) * 100;
+                    return (
+                      <div key={index} className="flex flex-col items-center flex-1">
+                        <div 
+                          className="bg-verdeprimario-100 rounded-t w-full transition-all duration-300 hover:bg-verdeprimario-200"
+                          style={{ height: `${height}%` }}
+                        />
+                        <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt mt-1">
+                          {point.count}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">
+                    Últimos {(analytics.serviceGrowth || []).length} períodos
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-negro-100 font-raleway-bold-16pt">
               <Calendar className="h-5 w-5" />
               Crecimiento de Reservas
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-grisprimario-200 font-raleway-medium-14pt">
               Últimos 30 días
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Gráfico de reservas</p>
-              <p className="text-sm text-gray-500">
-                {analytics.bookingGrowth.length} puntos de datos
-              </p>
-            </div>
+            {(analytics.bookingGrowth || []).length === 0 ? (
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 text-grisprimario-200 mx-auto mb-4" />
+                <p className="text-grisprimario-200 font-raleway-medium-16pt">No hay datos disponibles</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-verdesecundario-100 font-raleway-bold-20pt">
+                      {analytics.bookingGrowth[analytics.bookingGrowth.length - 1]?.count || 0}
+                    </p>
+                    <p className="text-sm text-grisprimario-200 font-raleway-medium-14pt">Reservas totales</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-verdesecundario-100 font-raleway-bold-16pt">
+                      +{analytics.bookingGrowth[analytics.bookingGrowth.length - 1]?.count - analytics.bookingGrowth[0]?.count || 0}
+                    </p>
+                    <p className="text-sm text-grisprimario-200 font-raleway-medium-14pt">Crecimiento</p>
+                  </div>
+                </div>
+                <div className="flex items-end justify-between h-20 gap-2">
+                  {analytics.bookingGrowth.map((point, index) => {
+                    const maxCount = Math.max(...analytics.bookingGrowth.map(p => p.count));
+                    const height = (point.count / maxCount) * 100;
+                    return (
+                      <div key={index} className="flex flex-col items-center flex-1">
+                        <div 
+                          className="bg-verdesecundario-100 rounded-t w-full transition-all duration-300 hover:bg-verdesecundario-200"
+                          style={{ height: `${height}%` }}
+                        />
+                        <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt mt-1">
+                          {point.count}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">
+                    Últimos {(analytics.bookingGrowth || []).length} períodos
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -410,22 +567,22 @@ export function AdminDashboard() {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Acciones Rápidas</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-negro-100 font-raleway-bold-16pt">Acciones Rápidas</CardTitle>
+          <CardDescription className="text-grisprimario-200 font-raleway-medium-14pt">
             Herramientas de administración
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
+            <Button variant="outline" className="h-20 flex flex-col gap-2 bg-blanco-100 text-negro-100 border-grisprimario-10 hover:bg-grisprimario-10 hover:text-negro-100 rounded-full font-raleway-medium-16pt">
               <Users className="h-6 w-6" />
               <span>Gestionar Usuarios</span>
             </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
+            <Button variant="outline" className="h-20 flex flex-col gap-2 bg-blanco-100 text-negro-100 border-grisprimario-10 hover:bg-grisprimario-10 hover:text-negro-100 rounded-full font-raleway-medium-16pt">
               <Briefcase className="h-6 w-6" />
               <span>Gestionar Servicios</span>
             </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
+            <Button variant="outline" className="h-20 flex flex-col gap-2 bg-blanco-100 text-negro-100 border-grisprimario-10 hover:bg-grisprimario-10 hover:text-negro-100 rounded-full font-raleway-medium-16pt">
               <Calendar className="h-6 w-6" />
               <span>Gestionar Reservas</span>
             </Button>

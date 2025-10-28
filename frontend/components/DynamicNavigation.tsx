@@ -6,6 +6,7 @@ import { Menu, X, User, Settings, LogOut, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
+import { getImageUrl } from "@/lib/utils";
 
 export interface NavigationItem {
   label: string;
@@ -26,6 +27,7 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -50,6 +52,11 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isUserMenuOpen, isMobileMenuOpen]);
+
+  // Reset image error when user changes
+  useEffect(() => {
+    setImageLoadError(false);
+  }, [user?.profileImageUrl]);
 
   // Color variants based on page type
   const variants = {
@@ -135,7 +142,7 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
   const rightItems = getRightItems();
 
   return (
-    <nav className={`flex w-full items-center justify-center gap-3.5 pt-[49px] pb-6 px-4 relative ${className}`}>
+    <nav className={`sticky top-0 z-50 flex w-full items-center justify-center gap-3.5 pt-[49px] pb-6 px-4 bg-blanco-100 ${className}`}>
       {/* Desktop Navigation */}
       <div className={`hidden lg:flex items-center justify-center gap-1 px-[18px] py-2.5 ${currentVariant.navBg} rounded-[50px] backdrop-blur-[25px] backdrop-brightness-[100%] [-webkit-backdrop-filter:blur(25px)_brightness(100%)]`}>
         {leftItems.map((item, index) => (
@@ -179,12 +186,26 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
               className="h-[57px] px-6 py-3 rounded-[50px] border border-solid border-white bg-transparent text-blanco-100 hover:bg-blanco-100 hover:text-verdeprimario-100 transition-colors flex items-center gap-2"
             >
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-semibold">
-                {user?.profileImageUrl ? (
-                  <img
-                    src={user.profileImageUrl}
-                    alt="Profile"
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
+                {user?.profileImageUrl && user.profileImageUrl.trim() !== '' && !imageLoadError ? (
+                  <>
+                    {console.log('DynamicNavigation - user.profileImageUrl:', user.profileImageUrl)}
+                    {console.log('DynamicNavigation - getImageUrl result:', getImageUrl(user.profileImageUrl))}
+                    <img
+                      src={getImageUrl(user.profileImageUrl)}
+                      alt="Profile"
+                      className="w-8 h-8 rounded-full object-cover"
+                      onLoad={() => {
+                        console.log('DynamicNavigation - Image loaded successfully');
+                        setImageLoadError(false);
+                      }}
+                      onError={(e) => {
+                        console.error('DynamicNavigation - Image load error:', e);
+                        console.error('DynamicNavigation - Failed URL:', getImageUrl(user.profileImageUrl));
+                        console.error('DynamicNavigation - User profileImageUrl:', user.profileImageUrl);
+                        setImageLoadError(true);
+                      }}
+                    />
+                  </>
                 ) : (
                   getUserInitials()
                 )}

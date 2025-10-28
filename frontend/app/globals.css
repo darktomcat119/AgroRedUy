@@ -33,7 +33,9 @@
   --blanco-100: rgba(255, 255, 255, 1);
   --grisprimario-10: rgba(242, 242, 242, 0.1);
   --grisprimario-100: rgba(242, 242, 242, 1);
+  --grisprimario-200: rgba(180, 180, 180, 1);
   --grissecundario-100: rgba(200, 200, 200, 1);
+  --grissecundario-200: rgba(120, 120, 120, 1);
   --naranja-100: rgba(246, 127, 45, 1);
   --naranja-50: rgba(246, 127, 45, 0.5);
   --negro-100: rgba(0, 0, 0, 1);

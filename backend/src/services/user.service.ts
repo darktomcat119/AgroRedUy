@@ -155,10 +155,22 @@ export class UserService {
       // Prepare update data
       const dataToUpdate: any = { ...updateData };
 
-      // Convert dateOfBirth string to Date if provided
-      if (updateData.dateOfBirth) {
-        dataToUpdate.dateOfBirth = new Date(updateData.dateOfBirth);
+      // Handle dateOfBirth conversion - convert to Date if provided and not empty, otherwise set to null
+      if (updateData.dateOfBirth !== undefined) {
+        if (updateData.dateOfBirth && updateData.dateOfBirth.trim() !== '') {
+          dataToUpdate.dateOfBirth = new Date(updateData.dateOfBirth);
+        } else {
+          dataToUpdate.dateOfBirth = null;
+        }
       }
+
+      // Handle other optional string fields - convert empty strings to null
+      const optionalStringFields: (keyof UserUpdateData)[] = ['phone', 'address', 'city', 'department', 'gender', 'occupation', 'company', 'profileImageUrl'];
+      optionalStringFields.forEach(field => {
+        if (updateData[field] !== undefined && updateData[field] === '') {
+          dataToUpdate[field] = null;
+        }
+      });
 
       // Update user
       const updatedUser = await prisma.user.update({

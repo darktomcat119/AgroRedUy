@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
+import { toast, Toaster } from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,10 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { User, Mail, Phone, MapPin, Calendar, Edit, Save, X, Camera } from 'lucide-react';
 import { DynamicNavigation } from '@/components/DynamicNavigation';
+import { AvatarUpload } from '@/components/AvatarUpload';
 import { apiClient } from '@/lib/api';
+import { getImageUrl } from '@/lib/utils';
+import { UploadResult } from '@/lib/fileUpload';
 
 interface UserProfile {
   id: string;
@@ -31,7 +34,7 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -117,6 +120,31 @@ export default function ProfilePage() {
         setProfile(updatedProfile);
         setFormData(updatedProfile);
         setIsEditing(false);
+        
+        // Update the auth context with the new user data
+        updateUser({
+          id: response.data.id,
+          firstName: response.data.firstName,
+          lastName: response.data.lastName,
+          email: response.data.email,
+          phone: response.data.phone,
+          address: response.data.address,
+          city: response.data.city,
+          department: response.data.department,
+          dateOfBirth: response.data.dateOfBirth,
+          gender: response.data.gender,
+          profileImageUrl: response.data.profileImageUrl,
+          role: response.data.role,
+          isActive: response.data.isActive,
+          emailVerified: response.data.emailVerified,
+          occupation: response.data.occupation,
+          company: response.data.company,
+          interests: response.data.interests,
+          newsletter: response.data.newsletter,
+          createdAt: response.data.createdAt,
+          updatedAt: response.data.updatedAt,
+        });
+        
         toast.success('Perfil actualizado correctamente');
       } else {
         throw new Error(response.message || 'Error al actualizar el perfil');
@@ -134,17 +162,24 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleAvatarUpload = (result: UploadResult) => {
+    if (result.success && result.url) {
+      setFormData(prev => ({
+        ...prev,
+        profileImageUrl: result.url!
+      }));
+      toast.success('Avatar actualizado correctamente');
+    } else {
+      toast.error(result.error || 'Error al subir el avatar');
+    }
+  };
 
-    // Simulate image upload
-    const imageUrl = URL.createObjectURL(file);
+  const handleAvatarRemove = () => {
     setFormData(prev => ({
       ...prev,
-      profileImageUrl: imageUrl
+      profileImageUrl: ''
     }));
-    toast.success('Imagen actualizada');
+    toast.success('Avatar eliminado');
   };
 
   if (isLoading) {
@@ -192,33 +227,42 @@ export default function ProfilePage() {
           <div className="lg:col-span-1">
             <Card>
               <CardContent className="p-6 text-center">
-                <div className="relative inline-block mb-4">
-                  <div className="w-24 h-24 rounded-full bg-verdeprimario-100 flex items-center justify-center text-white text-2xl font-bold">
-                    {profile.profileImageUrl ? (
-                      <img
-                        src={profile.profileImageUrl}
-                        alt="Profile"
-                        className="w-24 h-24 rounded-full object-cover"
-                      />
-                    ) : (
-                      profile.firstName.charAt(0).toUpperCase()
-                    )}
-                  </div>
-                  {isEditing && (
-                    <label className="absolute bottom-0 right-0 bg-verdeprimario-100 text-white rounded-full p-2 cursor-pointer hover:bg-verdeprimario-100/90 transition-colors">
-                      <Camera className="w-4 h-4" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                    </label>
+                <div className="mb-4">
+                  {isEditing ? (
+                    <AvatarUpload
+                      currentAvatar={formData.profileImageUrl}
+                      onUpload={handleAvatarUpload}
+                      onRemove={handleAvatarRemove}
+                      size="lg"
+                      className="mx-auto"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-verdeprimario-100 flex items-center justify-center text-white text-2xl font-bold mx-auto">
+                      {profile.profileImageUrl ? (
+                        <>
+                          {console.log('Profile - profile.profileImageUrl:', profile.profileImageUrl)}
+                          {console.log('Profile - getImageUrl result:', getImageUrl(profile.profileImageUrl))}
+                          <img
+                            src={getImageUrl(profile.profileImageUrl)}
+                            alt="Profile"
+                            className="w-24 h-24 rounded-full object-cover"
+                            onLoad={() => console.log('Profile - Image loaded successfully')}
+                            onError={(e) => {
+                              console.error('Profile - Image load error:', e);
+                              console.error('Profile - Failed URL:', getImageUrl(profile.profileImageUrl));
+                              console.error('Profile - Profile profileImageUrl:', profile.profileImageUrl);
+                            }}
+                          />
+                        </>
+                      ) : (
+                        profile.firstName.charAt(0).toUpperCase()
+                      )}
+                    </div>
                   )}
                 </div>
                 
                 <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                  {profile.firstName} {profile.lastName}
+                  {isEditing ? `${formData.firstName || ''} ${formData.lastName || ''}` : `${profile.firstName} ${profile.lastName}`}
                 </h2>
                 
                 <p className="text-gray-600 mb-4">
@@ -227,16 +271,16 @@ export default function ProfilePage() {
                 
                 <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
                   <Mail className="w-4 h-4" />
-                  <span>{profile.email}</span>
+                  <span>{isEditing ? (formData.email || '') : profile.email}</span>
                   {profile.isEmailVerified && (
                     <span className="text-verdeprimario-100">✓</span>
                   )}
                 </div>
                 
-                {profile.phone && (
+                {(isEditing ? formData.phone : profile.phone) && (
                   <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-2">
                     <Phone className="w-4 h-4" />
-                    <span>{profile.phone}</span>
+                    <span>{isEditing ? (formData.phone || '') : profile.phone}</span>
                   </div>
                 )}
               </CardContent>
@@ -253,10 +297,9 @@ export default function ProfilePage() {
                     onClick={() => setIsEditing(true)}
                     variant="outline"
                     size="sm"
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 bg-gray-800 text-white hover:bg-gray-700 rounded-full px-3 py-2"
                   >
                     <Edit className="w-4 h-4" />
-                    Editar
                   </Button>
                 ) : (
                   <div className="flex gap-2">
@@ -264,19 +307,17 @@ export default function ProfilePage() {
                       onClick={handleSave}
                       disabled={isSaving}
                       size="sm"
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 rounded-full px-3 py-2"
                     >
                       <Save className="w-4 h-4" />
-                      {isSaving ? 'Guardando...' : 'Guardar'}
                     </Button>
                     <Button
                       onClick={handleCancel}
                       variant="outline"
                       size="sm"
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 bg-red-600 text-white hover:bg-red-700 rounded-full px-3 py-2"
                     >
                       <X className="w-4 h-4" />
-                      Cancelar
                     </Button>
                   </div>
                 )}
@@ -468,6 +509,7 @@ export default function ProfilePage() {
         </div>
         </div>
       </div>
+      <Toaster position="top-right" />
     </div>
   );
 }

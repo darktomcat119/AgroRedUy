@@ -1,26 +1,10 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { body, validationResult } from 'express-validator';
+import { Router } from 'express';
+import { body } from 'express-validator';
 import { AuthController } from '../controllers/auth.controller';
+import { validateRequest } from '../middleware/validation.middleware.js';
 
 const router = Router();
 const authController = new AuthController();
-
-// Validation middleware
-const validateRequest = (req: Request, res: Response, next: NextFunction): void => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    res.status(400).json({
-      success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid input data',
-        details: errors.array()
-      }
-    });
-    return;
-  }
-  next();
-};
 
 // POST /auth/register
 router.post('/register', [
@@ -40,9 +24,50 @@ router.post('/register', [
     .isLength({ min: 2, max: 50 })
     .withMessage('Last name must be between 2 and 50 characters'),
   body('phone')
-    .optional()
+    .optional({ checkFalsy: true })
     .isMobilePhone('any', { strictMode: false })
     .withMessage('Valid phone number is required'),
+  body('address')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage('Address must be less than 255 characters'),
+  body('city')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('City must be less than 100 characters'),
+  body('department')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Department must be less than 100 characters'),
+  body('dateOfBirth')
+    .optional({ checkFalsy: true })
+    .isISO8601()
+    .withMessage('Valid date of birth is required'),
+  body('gender')
+    .optional({ checkFalsy: true })
+    .isIn(['masculino', 'femenino', 'otro', 'prefiero-no-decir'])
+    .withMessage('Valid gender is required'),
+  body('occupation')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Occupation must be less than 100 characters'),
+  body('company')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Company must be less than 100 characters'),
+  body('interests')
+    .optional()
+    .isArray()
+    .withMessage('Interests must be an array'),
+  body('newsletter')
+    .optional()
+    .isBoolean()
+    .withMessage('Newsletter must be a boolean'),
   validateRequest
 ], authController.register);
 

@@ -63,6 +63,10 @@ export const authenticateToken = async (
       role: user.role
     };
 
+    console.log('Auth middleware - User role:', user.role);
+    console.log('Auth middleware - User email:', user.email);
+    console.log('Auth middleware - User active:', user.isActive);
+
     next();
   } catch (error) {
     logger.error('Authentication error:', error);
@@ -78,7 +82,12 @@ export const authenticateToken = async (
 
 export const requireRole = (roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void | Response => {
+    console.log('requireRole - Required roles:', roles);
+    console.log('requireRole - User role:', req.user?.role);
+    console.log('requireRole - User exists:', !!req.user);
+    
     if (!req.user || !roles.includes(req.user.role)) {
+      console.log('requireRole - Access denied');
       return res.status(403).json({
         success: false,
         error: {
@@ -87,9 +96,10 @@ export const requireRole = (roles: string[]) => {
         }
       });
     }
+    console.log('requireRole - Access granted');
     next();
   };
 };
 
-export const requireAdmin = requireRole(['admin', 'superadmin']);
-export const requireSuperAdmin = requireRole(['superadmin']);
+export const requireAdmin = requireRole(['admin', 'superadmin', 'ADMIN', 'SUPERADMIN']);
+export const requireSuperAdmin = requireRole(['superadmin', 'SUPERADMIN']);

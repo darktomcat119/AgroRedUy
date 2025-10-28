@@ -22,14 +22,45 @@ export class AuthController {
    */
   public register = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { email, password, firstName, lastName, phone } = req.body;
+      console.log('Received registration data:', req.body);
+      
+      const { 
+        email, 
+        password, 
+        firstName, 
+        lastName, 
+        phone,
+        address,
+        city,
+        department,
+        dateOfBirth,
+        gender,
+        occupation,
+        company,
+        interests,
+        newsletter
+      } = req.body;
+      
+      console.log('Extracted fields:', {
+        email, firstName, lastName, phone, address, city, department, 
+        dateOfBirth, gender, occupation, company, interests, newsletter
+      });
 
       const result = await this.authService.register({
         email,
         password,
         firstName,
         lastName,
-        phone
+        phone,
+        address,
+        city,
+        department,
+        dateOfBirth,
+        gender,
+        occupation,
+        company,
+        interests,
+        newsletter
       });
 
       res.status(201).json({
@@ -111,6 +142,8 @@ export class AuthController {
   public login = async (req: Request, res: Response): Promise<void> => {
     try {
       const { email, password } = req.body;
+      
+      console.log('Login attempt:', { email, passwordLength: password?.length });
 
       const result = await this.authService.login({ email, password });
 

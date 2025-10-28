@@ -42,18 +42,24 @@ export interface AuthState {
   error: string | null;
 }
 
+export interface AuthResponse {
+  user: User;
+  accessToken: string;
+}
+
 export interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<ApiResponse>;
+  login: (email: string, password: string) => Promise<ApiResponse<AuthResponse>>;
   register: (userData: {
     email: string;
     password: string;
     firstName: string;
     lastName: string;
     phone?: string;
-  }) => Promise<ApiResponse>;
+  }) => Promise<ApiResponse<AuthResponse>>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
   clearError: () => void;
+  updateUser: (updatedUser: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -85,6 +91,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           if (userData) {
             const parsedUserData = JSON.parse(userData);
             console.log('Retrieved user data from localStorage:', parsedUserData);
+            console.log('ProfileImageUrl in localStorage:', parsedUserData.profileImageUrl);
+            console.log('User role in localStorage:', parsedUserData.role);
             setUser(parsedUserData);
           }
         }
@@ -102,7 +110,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     initializeAuth();
   }, []);
 
-  const login = async (email: string, password: string): Promise<ApiResponse> => {
+  const login = async (email: string, password: string): Promise<ApiResponse<AuthResponse>> => {
     try {
       setError(null);
       setIsLoading(true);
@@ -110,14 +118,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await apiClient.login({ email, password });
 
       if (response.success && response.data) {
-        const { user: userData, accessToken } = response.data;
+        const { user: userData, accessToken } = response.data as AuthResponse;
         console.log('Login response user data:', userData);
         setUser(userData);
         localStorage.setItem('userData', JSON.stringify(userData));
-        return response;
+        return {
+          success: true,
+          data: { user: userData, accessToken }
+        };
       } else {
         setError(response.error?.message || 'Login failed');
-        return response;
+        return {
+          success: false,
+          error: response.error
+        };
       }
     } catch (error) {
       const errorMessage = 'An unexpected error occurred during login';
@@ -140,7 +154,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     firstName: string;
     lastName: string;
     phone?: string;
-  }): Promise<ApiResponse> => {
+  }): Promise<ApiResponse<AuthResponse>> => {
     try {
       setError(null);
       setIsLoading(true);
@@ -148,13 +162,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await apiClient.register(userData);
 
       if (response.success && response.data) {
-        const { user: newUser, accessToken } = response.data;
+        const { user: newUser, accessToken } = response.data as AuthResponse;
         setUser(newUser);
         localStorage.setItem('userData', JSON.stringify(newUser));
-        return response;
+        return {
+          success: true,
+          data: { user: newUser, accessToken }
+        };
       } else {
         setError(response.error?.message || 'Registration failed');
-        return response;
+        return {
+          success: false,
+          error: response.error
+        };
       }
     } catch (error) {
       const errorMessage = 'An unexpected error occurred during registration';
@@ -201,6 +221,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
   };
 
+  const updateUser = (updatedUser: User): void => {
+    setUser(updatedUser);
+    localStorage.setItem('userData', JSON.stringify(updatedUser));
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated,
@@ -211,6 +236,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     logout,
     refreshToken,
     clearError,
+    updateUser,
   };
 
   return (
