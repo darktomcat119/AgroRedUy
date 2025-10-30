@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { fileService } from '../services/file.service';
 import { AuthRequest } from '../middleware/auth.middleware';
 import bcrypt from 'bcryptjs';
 
@@ -226,6 +227,7 @@ export class AdminController {
             phone: true,
             role: true,
             isActive: true,
+            profileImageUrl: true,
             createdAt: true,
             lastLoginAt: true
           },
@@ -234,10 +236,20 @@ export class AdminController {
         prisma.user.count({ where })
       ]);
 
+      // Transform relative URLs to full URLs for profileImageUrl
+      const transformedUsers = users.map(user => ({
+        ...user,
+        profileImageUrl: user.profileImageUrl 
+          ? (user.profileImageUrl.startsWith('http') 
+              ? user.profileImageUrl 
+              : `${process.env.API_URL || 'http://localhost:3001'}${user.profileImageUrl}`)
+          : null
+      }));
+
       res.json({
         success: true,
         data: {
-          users,
+          users: transformedUsers,
           pagination: {
             page: Number(page),
             limit: Number(limit),
@@ -263,7 +275,26 @@ export class AdminController {
    */
   public createUser = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { email, password, firstName, lastName, phone, role, isActive, emailVerified } = req.body;
+      const { 
+        email, 
+        password, 
+        firstName, 
+        lastName, 
+        phone, 
+        role, 
+        isActive, 
+        emailVerified,
+        address,
+        city,
+        department,
+        dateOfBirth,
+        gender,
+        occupation,
+        company,
+        interests,
+        newsletter,
+        profileImageUrl
+      } = req.body;
 
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
@@ -294,7 +325,17 @@ export class AdminController {
           phone: phone || null,
           role: role || 'USER',
           isActive: isActive !== undefined ? isActive : true,
-          emailVerified: emailVerified !== undefined ? emailVerified : false
+          emailVerified: emailVerified !== undefined ? emailVerified : false,
+          profileImageUrl: profileImageUrl || null,
+          address: address || null,
+          city: city || null,
+          department: department || null,
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+          gender: gender || null,
+          occupation: occupation || null,
+          company: company || null,
+          interests: interests ? interests.split(',').map((i: string) => i.trim()).filter((i: string) => i.length > 0) : [],
+          newsletter: newsletter !== undefined ? newsletter : false
         },
         select: {
           id: true,
@@ -438,6 +479,64 @@ export class AdminController {
       if (updateData.password) {
         updateData.passwordHash = await bcrypt.hash(updateData.password, 12);
         delete updateData.password; // Remove plain password
+      }
+
+      // Normalize dateOfBirth to a valid Date or null
+      if (typeof updateData.dateOfBirth !== 'undefined') {
+        if (typeof updateData.dateOfBirth === 'string' && updateData.dateOfBirth.trim() !== '') {
+          const parsed = new Date(updateData.dateOfBirth);
+          if (!isNaN(parsed.getTime())) {
+            updateData.dateOfBirth = parsed;
+          } else {
+            // Invalid date string; respond with 400
+            res.status(400).json({
+              success: false,
+              error: {
+                code: 'INVALID_DATE_OF_BIRTH',
+                message: 'dateOfBirth must be a valid ISO date (e.g., 2025-10-15 or 2025-10-15T00:00:00Z)'
+              }
+            });
+            return;
+          }
+        } else {
+          updateData.dateOfBirth = null;
+        }
+      }
+
+      // Convert empty optional strings to null
+      const optionalStrings = ['phone','address','city','department','gender','occupation','company','profileImageUrl','interests'];
+      for (const key of optionalStrings) {
+        if (Object.prototype.hasOwnProperty.call(updateData, key) && typeof updateData[key] === 'string' && updateData[key].trim() === '') {
+          updateData[key] = null;
+        }
+      }
+
+      // Coerce booleans if sent as strings
+      if (typeof updateData.isActive !== 'undefined') {
+        updateData.isActive = Boolean(updateData.isActive);
+      }
+      if (typeof updateData.emailVerified !== 'undefined') {
+        updateData.emailVerified = Boolean(updateData.emailVerified);
+      }
+
+      // Normalize interests to string[] for Prisma scalar list
+      if (typeof updateData.interests !== 'undefined') {
+        if (Array.isArray(updateData.interests)) {
+          const cleaned = updateData.interests
+            .filter((v: unknown) => typeof v === 'string')
+            .map((v: string) => v.trim())
+            .filter((v: string) => v.length > 0);
+          updateData.interests = cleaned;
+        } else if (typeof updateData.interests === 'string') {
+          const cleaned = updateData.interests
+            .split(/[,\n]/)
+            .map((v: string) => v.trim())
+            .filter((v: string) => v.length > 0);
+          updateData.interests = cleaned;
+        } else {
+          // Any other type → clear interests
+          updateData.interests = [];
+        }
       }
 
       console.log('Processed update data:', updateData);
@@ -687,15 +786,17 @@ export class AdminController {
               name: true
             }
           },
+          units: {
+            select: {
+              id: true,
+              name: true,
+              symbol: true
+            }
+          },
           images: {
             orderBy: { sortOrder: 'asc' }
           },
           availability: {
-            where: {
-              date: {
-                gte: new Date()
-              }
-            },
             orderBy: { date: 'asc' }
           },
           bookings: {
@@ -752,16 +853,60 @@ export class AdminController {
     try {
       const { id } = req.params;
       const updateData = req.body;
+      const schedule = (req.body as any).schedule as { startDate?: string; endDate?: string; startTime?: string; endTime?: string } | undefined;
 
-      // Remove fields that shouldn't be updated directly
-      delete updateData.id;
-      delete updateData.userId;
-      delete updateData.createdAt;
-      delete updateData.updatedAt;
+      // Validate foreign keys if present
+      if (updateData.categoryId) {
+        const category = await prisma.category.findUnique({ where: { id: String(updateData.categoryId) } });
+        if (!category) {
+          res.status(400).json({ success: false, error: { code: 'INVALID_CATEGORY', message: 'categoryId does not exist' } });
+          return;
+        }
+      }
+      if (updateData.unit_id) {
+        const unit = await prisma.units.findUnique({ where: { id: String(updateData.unit_id) } });
+        if (!unit) {
+          res.status(400).json({ success: false, error: { code: 'INVALID_UNIT', message: 'unit_id does not exist' } });
+          return;
+        }
+      }
+
+      // Build a safe Prisma update payload
+      const prismaData: any = {};
+
+      // Primitive fields
+      if (typeof updateData.title === 'string') prismaData.title = updateData.title;
+      if (typeof updateData.description === 'string') prismaData.description = updateData.description;
+      if (updateData.price !== undefined) prismaData.price = Number(updateData.price);
+      if (updateData.priceMin !== undefined) prismaData.priceMin = Number(updateData.priceMin);
+      if (updateData.priceMax !== undefined) prismaData.priceMax = Number(updateData.priceMax);
+      if (typeof updateData.priceCurrency === 'string') prismaData.priceCurrency = updateData.priceCurrency;
+      if (updateData.latitude !== undefined) prismaData.latitude = Number(updateData.latitude);
+      if (updateData.longitude !== undefined) prismaData.longitude = Number(updateData.longitude);
+      if (typeof updateData.address === 'string') prismaData.address = updateData.address;
+      if (typeof updateData.city === 'string') prismaData.city = updateData.city;
+      if (typeof updateData.department === 'string') prismaData.department = updateData.department;
+      if (typeof updateData.isActive === 'boolean') prismaData.isActive = updateData.isActive;
+
+      // Relations
+      if (updateData.categoryId) {
+        prismaData.category = { connect: { id: String(updateData.categoryId) } };
+      }
+      if (updateData.unit_id) {
+        prismaData.units = { connect: { id: String(updateData.unit_id) } };
+      }
+
+      // Remove fields that shouldn't be updated directly or are not columns
+      delete (updateData as any).id;
+      delete (updateData as any).userId;
+      delete (updateData as any).createdAt;
+      delete (updateData as any).updatedAt;
+      delete (updateData as any).schedule;
+      delete (updateData as any).images;
 
       const service = await prisma.service.update({
         where: { id },
-        data: updateData,
+        data: prismaData,
         include: {
           user: {
             select: {
@@ -776,17 +921,58 @@ export class AdminController {
               id: true,
               name: true
             }
+          },
+          units: {
+            select: {
+              id: true,
+              name: true,
+              symbol: true
+            }
           }
         }
       });
+
+      // If schedule provided, reset availability for this service to the new range (full-day if times omitted)
+      if (schedule && schedule.startDate && schedule.endDate) {
+        // Remove existing availability
+        await prisma.availability.deleteMany({ where: { serviceId: id } });
+
+        const start = new Date(schedule.startDate);
+        const end = new Date(schedule.endDate);
+        const toCreate: any[] = [];
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          toCreate.push({
+            serviceId: id,
+            date: new Date(d),
+            startTime: schedule.startTime || '00:00',
+            endTime: schedule.endTime || '23:59',
+            isAvailable: true,
+            isBooked: false
+          });
+        }
+        if (toCreate.length > 0) {
+          await prisma.availability.createMany({ data: toCreate });
+        }
+      }
 
       res.json({
         success: true,
         data: service,
         message: 'Service updated successfully'
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating service:', error);
+      if (error?.code === 'P2003') {
+        const fieldName = error?.meta?.field_name as string | undefined;
+        if (fieldName && fieldName.includes('services_unit_id_fkey')) {
+          res.status(400).json({ success: false, error: { code: 'INVALID_UNIT', message: 'unit_id does not exist' } });
+          return;
+        }
+        if (fieldName && fieldName.includes('services_category_id_fkey')) {
+          res.status(400).json({ success: false, error: { code: 'INVALID_CATEGORY', message: 'categoryId does not exist' } });
+          return;
+        }
+      }
       res.status(500).json({
         success: false,
         error: {
@@ -821,6 +1007,176 @@ export class AdminController {
           message: 'Error deleting service'
         }
       });
+    }
+  };
+
+  /**
+   * Delete a service image (Admin/SuperAdmin)
+   */
+  public deleteServiceImage = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { serviceId, imageId } = req.params as { serviceId: string; imageId: string };
+
+      // Fetch image and validate it belongs to the service
+      const image = await prisma.serviceImage.findUnique({ where: { id: imageId } });
+      if (!image) {
+        res.status(404).json({ success: false, error: { code: 'IMAGE_NOT_FOUND', message: 'Service image not found' } });
+        return;
+      }
+      if (image.serviceId !== serviceId) {
+        res.status(400).json({ success: false, error: { code: 'IMAGE_SERVICE_MISMATCH', message: 'Image does not belong to service' } });
+        return;
+      }
+
+      // Delete DB record first
+      await prisma.serviceImage.delete({ where: { id: imageId } });
+
+      // Attempt to delete physical file if it's a local upload path
+      const imageUrl = image.imageUrl || '';
+      let relativePath = '';
+      if (imageUrl.startsWith('http')) {
+        // Extract '/uploads/...' segment if present
+        const uploadsIndex = imageUrl.indexOf('/uploads/');
+        if (uploadsIndex >= 0) {
+          relativePath = imageUrl.substring(uploadsIndex + '/uploads/'.length);
+        }
+      } else if (imageUrl.startsWith('/uploads/')) {
+        relativePath = imageUrl.substring('/uploads/'.length);
+      }
+
+      if (relativePath) {
+        try {
+          await fileService.deleteFile(relativePath);
+        } catch (_e) {
+          // ignore file deletion errors
+        }
+      }
+
+      res.json({ success: true, message: 'Service image deleted' });
+    } catch (error) {
+      console.error('Error deleting service image:', error);
+      res.status(500).json({ success: false, error: { code: 'SERVICE_IMAGE_DELETE_ERROR', message: 'Error deleting service image' } });
+    }
+  };
+
+  /**
+   * Create service (Admin/SuperAdmin)
+   */
+  public createService = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.id as string;
+      const {
+        title,
+        description,
+        price,
+        priceMin,
+        priceMax,
+        latitude,
+        longitude,
+        address,
+        city,
+        department,
+        categoryId,
+        unit_id,
+        images = [],
+        schedule
+      } = req.body as any;
+      // Pre-validate FK references to avoid Prisma P2003
+      const [category, unit] = await Promise.all([
+        prisma.category.findUnique({ where: { id: String(categoryId) } }),
+        prisma.units.findUnique({ where: { id: String(unit_id) } })
+      ]);
+      if (!category) {
+        res.status(400).json({ success: false, error: { code: 'INVALID_CATEGORY', message: 'categoryId does not exist' } });
+        return;
+      }
+      if (!unit) {
+        res.status(400).json({ success: false, error: { code: 'INVALID_UNIT', message: 'unit_id does not exist' } });
+        return;
+      }
+      // Use service layer to avoid schema/type mismatches
+      const { ServiceService } = await import('../services/service.service');
+      const serviceService = new ServiceService();
+
+      const created = await serviceService.createService({
+        title: String(title),
+        description: String(description),
+        price: Number(price),
+        priceMin: priceMin !== undefined ? Number(priceMin) : undefined,
+        priceMax: priceMax !== undefined ? Number(priceMax) : undefined,
+        priceCurrency: (req.body as any).priceCurrency ? String((req.body as any).priceCurrency) : undefined,
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+        address: String(address),
+        city: String(city),
+        department: String(department),
+        categoryId: String(categoryId),
+        unit_id: String(unit_id),
+        userId
+      });
+
+      // Create images if provided
+      if (Array.isArray(images) && images.length > 0) {
+        let order = 0;
+        for (const url of images as string[]) {
+          await prisma.serviceImage.create({
+            data: {
+              serviceId: created.id,
+              imageUrl: url,
+              sortOrder: order++,
+              isPrimary: order === 1
+            }
+          });
+        }
+      }
+
+      // Create availability if a schedule was provided (times optional; default full-day)
+      if (schedule && schedule.startDate && schedule.endDate) {
+        const start = new Date(schedule.startDate);
+        const end = new Date(schedule.endDate);
+        // generate daily availability entries between dates
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          await prisma.availability.create({
+            data: {
+              serviceId: created.id,
+              date: new Date(d),
+              startTime: schedule.startTime || '00:00',
+              endTime: schedule.endTime || '23:59',
+              isAvailable: true,
+              isBooked: false
+            }
+          });
+        }
+      }
+
+      const result = await prisma.service.findUnique({
+        where: { id: created.id },
+        include: {
+          user: { select: { id: true, firstName: true, lastName: true, profileImageUrl: true } },
+          category: true,
+          images: { orderBy: { sortOrder: 'asc' } },
+          reviews: {
+            include: { user: { select: { firstName: true, lastName: true } } },
+            orderBy: { createdAt: 'desc' }
+          }
+        }
+      });
+
+      res.status(201).json({ success: true, data: result });
+    } catch (error: any) {
+      console.error('Error creating service:', error);
+      if (error?.code === 'P2003') {
+        const fieldName = error?.meta?.field_name as string | undefined;
+        if (fieldName && fieldName.includes('services_unit_id_fkey')) {
+          res.status(400).json({ success: false, error: { code: 'INVALID_UNIT', message: 'unit_id does not exist' } });
+          return;
+        }
+        if (fieldName && fieldName.includes('services_category_id_fkey')) {
+          res.status(400).json({ success: false, error: { code: 'INVALID_CATEGORY', message: 'categoryId does not exist' } });
+          return;
+        }
+      }
+      res.status(500).json({ success: false, error: { code: 'SERVICE_CREATE_ERROR', message: 'Error creating service' } });
     }
   };
 
@@ -871,235 +1227,18 @@ export class AdminController {
   };
 
   /**
-   * Generate reports
+   * Get measurement units for services
    */
-  public generateReport = async (req: AuthRequest, res: Response): Promise<void> => {
+  public getUnits = async (_req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { type, period, startDate, endDate } = req.body;
-
-      let reportData: any = {};
-      const reportId = `report_${Date.now()}`;
-
-      // Set date range
-      let dateFrom: Date;
-      let dateTo: Date = new Date();
-
-      if (period === 'last_7_days') {
-        dateFrom = new Date();
-        dateFrom.setDate(dateFrom.getDate() - 7);
-      } else if (period === 'last_30_days') {
-        dateFrom = new Date();
-        dateFrom.setDate(dateFrom.getDate() - 30);
-      } else if (period === 'last_90_days') {
-        dateFrom = new Date();
-        dateFrom.setDate(dateFrom.getDate() - 90);
-      } else if (period === 'custom' && startDate && endDate) {
-        dateFrom = new Date(startDate);
-        dateTo = new Date(endDate);
-      } else {
-        dateFrom = new Date();
-        dateFrom.setMonth(dateFrom.getMonth() - 1);
-      }
-
-      switch (type) {
-        case 'user_activity':
-          reportData = await this.generateUserActivityReport(dateFrom, dateTo);
-          break;
-        case 'service_performance':
-          reportData = await this.generateServicePerformanceReport(dateFrom, dateTo);
-          break;
-        case 'revenue_analysis':
-          reportData = await this.generateRevenueAnalysisReport(dateFrom, dateTo);
-          break;
-        case 'booking_trends':
-          reportData = await this.generateBookingTrendsReport(dateFrom, dateTo);
-          break;
-        case 'contractor_performance':
-          reportData = await this.generateContractorPerformanceReport(dateFrom, dateTo);
-          break;
-        default:
-          throw new Error('Invalid report type');
-      }
-
-      // Store report metadata
-      const reportMetadata = {
-        id: reportId,
-        type,
-        period,
-        dateFrom: dateFrom.toISOString(),
-        dateTo: dateTo.toISOString(),
-        generatedAt: new Date().toISOString(),
-        generatedBy: req.user?.id,
-        status: 'completed',
-        recordCount: reportData.summary?.totalRecords || 0
-      };
-
-      res.json({
-        success: true,
-        data: {
-          report: reportData,
-          metadata: reportMetadata
-        }
+      const units = await prisma.units.findMany({
+        where: { is_active: true },
+        orderBy: { name: 'asc' }
       });
+      res.json({ success: true, data: units });
     } catch (error) {
-      console.error('Error generating report:', error);
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'REPORT_GENERATION_ERROR',
-          message: 'Error generating report'
-        }
-      });
-    }
-  };
-
-  /**
-   * Get available reports
-   */
-  public getReports = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-      const { page = 1, limit = 10, type = '', status = '' } = req.query;
-      
-      const skip = (Number(page) - 1) * Number(limit);
-      
-      // Mock reports data for now - in production, this would come from a reports table
-      const mockReports = [
-        {
-          id: 'report_1',
-          type: 'user_activity',
-          title: 'User Activity Report',
-          period: 'last_30_days',
-          status: 'completed',
-          generatedAt: new Date(Date.now() - 86400000).toISOString(),
-          generatedBy: req.user?.id,
-          recordCount: 150,
-          description: 'User registration and activity analysis'
-        },
-        {
-          id: 'report_2',
-          type: 'service_performance',
-          title: 'Service Performance Report',
-          period: 'last_7_days',
-          status: 'completed',
-          generatedAt: new Date(Date.now() - 172800000).toISOString(),
-          generatedBy: req.user?.id,
-          recordCount: 45,
-          description: 'Service booking and performance metrics'
-        }
-      ];
-
-      const filteredReports = mockReports.filter(report => {
-        if (type && report.type !== type) return false;
-        if (status && report.status !== status) return false;
-        return true;
-      });
-
-      const paginatedReports = filteredReports.slice(skip, skip + Number(limit));
-
-      res.json({
-        success: true,
-        data: {
-          reports: paginatedReports,
-          pagination: {
-            page: Number(page),
-            limit: Number(limit),
-            total: filteredReports.length,
-            pages: Math.ceil(filteredReports.length / Number(limit))
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching reports:', error);
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'REPORTS_FETCH_ERROR',
-          message: 'Error fetching reports'
-        }
-      });
-    }
-  };
-
-  /**
-   * Get report details
-   */
-  public getReportDetails = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-      const { id } = req.params;
-
-      // Mock report details - in production, this would fetch from database
-      const mockReportDetails = {
-        id,
-        type: 'user_activity',
-        title: 'User Activity Report',
-        period: 'last_30_days',
-        status: 'completed',
-        generatedAt: new Date().toISOString(),
-        generatedBy: req.user?.id,
-        recordCount: 150,
-        description: 'User registration and activity analysis',
-        content: {
-          summary: {
-            totalUsers: 150,
-            newUsers: 25,
-            activeUsers: 120,
-            inactiveUsers: 30
-          },
-          details: [
-            { date: '2024-01-01', newUsers: 5, activeUsers: 45 },
-            { date: '2024-01-02', newUsers: 3, activeUsers: 48 },
-            { date: '2024-01-03', newUsers: 7, activeUsers: 52 }
-          ],
-          insights: [
-            'User registration increased by 15% this month',
-            'Peak activity occurs on weekends',
-            'Mobile app usage is growing steadily'
-          ]
-        }
-      };
-
-      res.json({
-        success: true,
-        data: mockReportDetails
-      });
-    } catch (error) {
-      console.error('Error fetching report details:', error);
-      res.status(500).json({
-          success: false,
-          error: {
-          code: 'REPORT_DETAILS_ERROR',
-          message: 'Error fetching report details'
-        }
-      });
-    }
-  };
-
-  /**
-   * Delete report
-   */
-  public deleteReport = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-      const { id } = req.params;
-      
-      // In a real implementation, you would delete the report
-      // await prisma.report.delete({ where: { id } });
-      
-      console.log(`Deleting report with ID: ${id}`);
-
-      // In production, this would delete from database
-      res.json({
-        success: true,
-        message: 'Report deleted successfully'
-      });
-    } catch (error) {
-      console.error('Error deleting report:', error);
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'REPORT_DELETE_ERROR',
-          message: 'Error deleting report'
-        }
-      });
+      console.error('Error fetching units:', error);
+      res.status(500).json({ success: false, error: { code: 'UNITS_FETCH_ERROR', message: 'Error fetching units' } });
     }
   };
 
@@ -1704,174 +1843,6 @@ export class AdminController {
       });
     }
   };
-
-  // Private helper methods for report generation
-  private async generateUserActivityReport(dateFrom: Date, dateTo: Date) {
-    const [totalUsers, newUsers, activeUsers] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({
-        where: {
-          createdAt: {
-            gte: dateFrom,
-            lte: dateTo
-          }
-        }
-      }),
-      prisma.user.count({
-        where: {
-          isActive: true,
-          updatedAt: {
-            gte: dateFrom,
-            lte: dateTo
-          }
-        }
-      })
-    ]);
-
-    return {
-      summary: {
-        totalUsers,
-        newUsers,
-        activeUsers,
-        inactiveUsers: totalUsers - activeUsers
-      },
-      trends: {
-        userGrowth: newUsers,
-        activityRate: totalUsers > 0 ? (activeUsers / totalUsers) * 100 : 0
-      }
-    };
-  }
-
-  private async generateServicePerformanceReport(dateFrom: Date, dateTo: Date) {
-    const [totalServices, activeServices, totalBookings] = await Promise.all([
-      prisma.service.count(),
-      prisma.service.count({ where: { isActive: true } }),
-      prisma.booking.count({
-        where: {
-          createdAt: {
-            gte: dateFrom,
-            lte: dateTo
-          }
-        }
-      })
-    ]);
-
-    return {
-      summary: {
-        totalServices,
-        activeServices,
-        totalBookings,
-        averageBookingsPerService: totalServices > 0 ? totalBookings / totalServices : 0
-      },
-      performance: {
-        serviceUtilization: totalServices > 0 ? (activeServices / totalServices) * 100 : 0,
-        bookingGrowth: totalBookings
-      }
-    };
-  }
-
-  private async generateRevenueAnalysisReport(dateFrom: Date, dateTo: Date) {
-    const revenueData = await prisma.booking.aggregate({
-      where: {
-        status: 'COMPLETED',
-        createdAt: {
-          gte: dateFrom,
-          lte: dateTo
-        }
-      },
-      _sum: { totalPrice: true },
-      _avg: { totalPrice: true },
-      _count: { id: true }
-    });
-
-    return {
-      summary: {
-        totalRevenue: revenueData._sum.totalPrice || 0,
-        averageRevenue: revenueData._avg.totalPrice || 0,
-        totalTransactions: revenueData._count.id
-      },
-      analysis: {
-        revenueGrowth: 0, // Would calculate based on previous period
-        topRevenueSources: [] as Array<{ category: string; revenue: number }>
-      }
-    };
-  }
-
-  private async generateBookingTrendsReport(dateFrom: Date, dateTo: Date) {
-    const bookings = await prisma.booking.findMany({
-      where: {
-        createdAt: {
-          gte: dateFrom,
-          lte: dateTo
-        }
-      },
-      select: {
-        status: true,
-        createdAt: true,
-        totalPrice: true
-      }
-    });
-
-    const statusCounts = bookings.reduce((acc, booking) => {
-      acc[booking.status] = (acc[booking.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return {
-      summary: {
-        totalBookings: bookings.length,
-        statusBreakdown: statusCounts
-      },
-      trends: {
-        dailyBookings: [] as Array<{ date: string; count: number }>,
-        statusTrends: statusCounts
-      }
-    };
-  }
-
-  private async generateContractorPerformanceReport(dateFrom: Date, dateTo: Date) {
-    const contractors = await prisma.user.findMany({
-      where: {
-        role: 'CONTRACTOR',
-        createdAt: {
-          gte: dateFrom,
-          lte: dateTo
-        }
-      },
-      include: {
-        services: {
-          include: {
-            bookings: {
-              where: {
-                createdAt: {
-                  gte: dateFrom,
-                  lte: dateTo
-                }
-              }
-            }
-          }
-        }
-      }
-    });
-
-    return {
-      summary: {
-        totalContractors: contractors.length,
-        activeContractors: contractors.filter(c => c.isActive).length
-      },
-      performance: {
-        topPerformers: contractors
-          .map(c => ({
-            id: c.id,
-            name: `${c.firstName} ${c.lastName}`,
-            servicesCount: c.services.length,
-            bookingsCount: c.services.reduce((sum, s) => sum + s.bookings.length, 0)
-          }))
-          .sort((a, b) => b.bookingsCount - a.bookingsCount)
-          .slice(0, 10)
-      }
-    };
-  }
 
   /**
    * Get all categories

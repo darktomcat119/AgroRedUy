@@ -12,26 +12,13 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function getImageUrl(imagePath?: string | null): string {
   if (!imagePath) return '';
-  
-  // If it's already a full URL, return as is
-  if (imagePath.startsWith('http')) {
-    console.log('Image URL (already full):', imagePath);
-    return imagePath;
-  }
-  
-  // If it starts with /uploads, use the Next.js API proxy
-  if (imagePath.startsWith('/uploads')) {
-    // Remove the leading /uploads and use the proxy
-    const relativePath = imagePath.replace('/uploads/', '');
-    const proxyUrl = `/api/image-proxy/${relativePath}`;
-    console.log('Image URL (proxy):', proxyUrl);
-    console.log('Original path:', imagePath);
-    return proxyUrl;
-  }
-  
-  // For any other relative path, assume it's an upload path
-  const proxyUrl = `/api/image-proxy/${imagePath}`;
-  console.log('Image URL (proxy fallback):', proxyUrl);
-  return proxyUrl;
+
+  // Always proxy through our same-origin endpoint to avoid next/image domain issues
+  // Handles both absolute (http...) and relative (/uploads/...) inputs
+  const target = imagePath.startsWith('http')
+    ? imagePath
+    : (imagePath.startsWith('/') ? imagePath : `/${imagePath}`);
+
+  return `/api/image-proxy?url=${encodeURIComponent(target)}`;
 }
 

@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { apiClient } from '@/lib/api';
 import { ConfirmDialog, ConfirmDialogs } from '@/components/ui/confirm-dialog';
 import { customToast, toastMessages } from '@/lib/toast';
+import { AvatarUpload } from '@/components/AvatarUpload';
 
 interface User {
   id: string;
@@ -27,10 +28,19 @@ interface User {
   phone?: string;
   role: 'USER' | 'CONTRACTOR' | 'ADMIN' | 'SUPERADMIN';
   isActive: boolean;
-  emailVerified: boolean;
+  emailVerified?: boolean;
   createdAt: string;
   lastLoginAt?: string;
   profileImageUrl?: string;
+  address?: string;
+  city?: string;
+  department?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  occupation?: string;
+  company?: string;
+  interests?: string | string[];
+  newsletter?: boolean;
 }
 
 export default function AdminUsersPage() {
@@ -78,7 +88,17 @@ export default function AdminUsersPage() {
     role: 'USER' as User['role'],
     password: '',
     isActive: true,
-    emailVerified: false
+    emailVerified: false,
+    address: '',
+    city: '',
+    department: '',
+    dateOfBirth: '',
+    gender: '',
+    occupation: '',
+    company: '',
+    interests: '',
+    newsletter: false,
+    profileImageUrl: ''
   });
 
   useEffect(() => {
@@ -183,7 +203,8 @@ export default function AdminUsersPage() {
       isOpen: true,
       ...config,
       onConfirm: handleCreateUser,
-      isLoading: false
+      isLoading: false,
+      icon: 'add' as const
     });
   };
 
@@ -194,7 +215,7 @@ export default function AdminUsersPage() {
       setConfirmDialog(prev => ({ ...prev, isLoading: true }));
       
       // Prepare update data, excluding password if it's empty
-      const updateData = { ...formData };
+      const updateData: any = { ...formData };
       if (!updateData.password || updateData.password.trim() === '') {
         delete updateData.password;
       }
@@ -202,9 +223,8 @@ export default function AdminUsersPage() {
       const response = await apiClient.updateUser(selectedUser.id, updateData);
       
       if (response.success) {
-        setUsers(prev => prev.map(user => 
-          user.id === selectedUser.id ? { ...user, ...response.data } : user
-        ));
+        // Refresh from server to ensure we show the canonical updated data
+        await loadUsers();
         setIsEditDialogOpen(false);
         setSelectedUser(null);
         resetForm();
@@ -275,9 +295,7 @@ export default function AdminUsersPage() {
       const response = await apiClient.updateUser(userId, { isActive: !user.isActive });
       
       if (response.success) {
-        setUsers(prev => prev.map(user => 
-          user.id === userId ? { ...user, isActive: !user.isActive } : user
-        ));
+        await loadUsers();
         customToast.success(user.isActive ? toastMessages.userDeactivated(`${user.firstName} ${user.lastName}`) : toastMessages.userActivated(`${user.firstName} ${user.lastName}`));
       } else {
         customToast.error(`Error al cambiar estado del usuario: ${response.error?.message || 'Error desconocido'}`);
@@ -299,7 +317,8 @@ export default function AdminUsersPage() {
       isOpen: true,
       ...config,
       onConfirm: () => handleToggleUserStatus(userId),
-      isLoading: false
+      isLoading: false,
+      icon: 'block' as const
     });
   };
 
@@ -312,23 +331,90 @@ export default function AdminUsersPage() {
       role: 'USER',
       password: '',
       isActive: true,
-      emailVerified: false
+      emailVerified: false,
+      address: '',
+      city: '',
+      department: '',
+      dateOfBirth: '',
+      gender: '',
+      occupation: '',
+      company: '',
+      interests: '',
+      newsletter: false,
+      profileImageUrl: ''
     });
   };
 
-  const openEditDialog = (user: User) => {
+  // Avatar upload handlers
+  const handleAvatarUpload = (result: any) => {
+    if (result.success) {
+      setFormData(prev => ({ ...prev, profileImageUrl: result.url }));
+      customToast.success('Avatar uploaded successfully');
+    } else {
+      customToast.error(result.error || 'Failed to upload avatar');
+    }
+  };
+
+  const handleAvatarRemove = () => {
+    setFormData(prev => ({ ...prev, profileImageUrl: '' }));
+  };
+
+  const openEditDialog = async (user: User) => {
     setSelectedUser(user);
-    setFormData({
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone || '',
-      role: user.role,
-      password: '',
-      isActive: user.isActive,
-      emailVerified: user.emailVerified
-    });
-    setIsEditDialogOpen(true);
+    try {
+      const resp = await apiClient.getUser(user.id);
+      const u = (resp && (resp as any).data) ? (resp as any).data : user;
+      setFormData({
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        phone: u.phone || '',
+        role: u.role || user.role,
+        password: '',
+        isActive: typeof u.isActive === 'boolean' ? u.isActive : user.isActive,
+        emailVerified: typeof u.emailVerified === 'boolean' ? u.emailVerified : (user.emailVerified || false),
+        address: u.address || user.address || '',
+        city: u.city || user.city || '',
+        department: u.department || user.department || '',
+        dateOfBirth: u.dateOfBirth ? toInputDate(u.dateOfBirth) : (user.dateOfBirth ? toInputDate(user.dateOfBirth) : ''),
+        gender: u.gender || user.gender || '',
+        occupation: u.occupation || user.occupation || '',
+        company: u.company || user.company || '',
+        interests: Array.isArray(u?.interests)
+          ? (u.interests as string[]).join(', ')
+          : (typeof u?.interests === 'string' && u.interests.trim().length > 0
+              ? u.interests
+              : (Array.isArray(user?.interests)
+                  ? (user.interests as string[]).join(', ')
+                  : (typeof user?.interests === 'string' ? (user.interests as string) : ''))),
+        newsletter: typeof u.newsletter === 'boolean' ? u.newsletter : (user.newsletter || false),
+        profileImageUrl: u.profileImageUrl || user.profileImageUrl || ''
+      });
+    } catch {
+      // Fallback to list data if detail fetch fails
+      setFormData({
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone || '',
+        role: user.role,
+        password: '',
+        isActive: user.isActive,
+        emailVerified: user.emailVerified || false,
+        address: user.address || '',
+        city: user.city || '',
+        department: user.department || '',
+        dateOfBirth: user.dateOfBirth ? toInputDate(user.dateOfBirth) : '',
+        gender: user.gender || '',
+        occupation: user.occupation || '',
+        company: user.company || '',
+        interests: Array.isArray(user.interests) ? user.interests.join(', ') : (user.interests || ''),
+        newsletter: user.newsletter || false,
+        profileImageUrl: user.profileImageUrl || ''
+      });
+    } finally {
+      setIsEditDialogOpen(true);
+    }
   };
 
   const getRoleDisplayName = (role: User['role']) => {
@@ -353,6 +439,15 @@ export default function AdminUsersPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-UY');
+  };
+
+  const toInputDate = (isoOrDateString: string) => {
+    const d = new Date(isoOrDateString);
+    if (isNaN(d.getTime())) return '';
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   };
 
   if (isLoading) {
@@ -490,13 +585,27 @@ export default function AdminUsersPage() {
                   Nuevo Usuario
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="text-negro-100 font-raleway-bold-16pt">Crear Nuevo Usuario</DialogTitle>
                   <DialogDescription className="text-grisprimario-200 font-raleway-medium-14pt">
                     Completa la información del nuevo usuario
                   </DialogDescription>
                 </DialogHeader>
+                
+                {/* Avatar Upload Section */}
+                <div className="flex flex-col items-center space-y-4 py-4 border-b border-grisprimario-10">
+                  <Label className="text-negro-100 font-raleway-medium-14pt">Foto de Perfil</Label>
+                  <AvatarUpload
+                    currentAvatar={formData.profileImageUrl}
+                    onUpload={handleAvatarUpload}
+                    onRemove={handleAvatarRemove}
+                    requireAuth={true}
+                    size="lg"
+                    className="mx-auto"
+                  />
+                </div>
+
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -585,6 +694,115 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
 
+                  {/* Additional User Information */}
+                  <div className="border-t pt-4">
+                    <h4 className="text-negro-100 font-raleway-bold-14pt mb-4">Información Adicional</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="city" className="text-negro-100 font-raleway-medium-14pt">Ciudad</Label>
+                        <Input
+                          id="city"
+                          value={formData.city}
+                          onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                          className="border-grisprimario-10 focus:border-verdeprimario-100"
+                          placeholder="Ej: Montevideo"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="department" className="text-negro-100 font-raleway-medium-14pt">Departamento</Label>
+                        <Input
+                          id="department"
+                          value={formData.department}
+                          onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                          className="border-grisprimario-10 focus:border-verdeprimario-100"
+                          placeholder="Ej: Montevideo"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="address" className="text-negro-100 font-raleway-medium-14pt">Dirección</Label>
+                      <Input
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                        className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        placeholder="Dirección completa"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="dateOfBirth" className="text-negro-100 font-raleway-medium-14pt">Fecha de Nacimiento</Label>
+                        <Input
+                          id="dateOfBirth"
+                          type="date"
+                          value={formData.dateOfBirth}
+                          onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                          className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="gender" className="text-negro-100 font-raleway-medium-14pt">Género</Label>
+                        <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
+                          <SelectTrigger className="border-grisprimario-10 focus:border-verdeprimario-100">
+                            <SelectValue placeholder="Seleccionar género" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="MALE">Masculino</SelectItem>
+                            <SelectItem value="FEMALE">Femenino</SelectItem>
+                            <SelectItem value="OTHER">Otro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="occupation" className="text-negro-100 font-raleway-medium-14pt">Ocupación</Label>
+                        <Input
+                          id="occupation"
+                          value={formData.occupation}
+                          onChange={(e) => setFormData(prev => ({ ...prev, occupation: e.target.value }))}
+                          className="border-grisprimario-10 focus:border-verdeprimario-100"
+                          placeholder="Ej: Ingeniero Agrónomo"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="company" className="text-negro-100 font-raleway-medium-14pt">Empresa</Label>
+                        <Input
+                          id="company"
+                          value={formData.company}
+                          onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                          className="border-grisprimario-10 focus:border-verdeprimario-100"
+                          placeholder="Nombre de la empresa"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="interests" className="text-negro-100 font-raleway-medium-14pt">Intereses</Label>
+                      <Textarea
+                        id="interests"
+                        value={formData.interests}
+                        onChange={(e) => setFormData(prev => ({ ...prev, interests: e.target.value }))}
+                        className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        placeholder="Describe los intereses del usuario..."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="newsletter"
+                        checked={formData.newsletter}
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, newsletter: checked }))}
+                      />
+                      <Label htmlFor="newsletter" className="text-negro-100 font-raleway-medium-14pt">Suscribirse al Newsletter</Label>
+                    </div>
+                  </div>
+
                   <div className="flex justify-end space-x-2 pt-4">
                     <Button
                       variant="outline"
@@ -645,11 +863,34 @@ export default function AdminUsersPage() {
                       <tr key={user.id} className="border-b border-grisprimario-10 hover:bg-grisprimario-10/50">
                         <td className="py-4 px-4">
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-verdeprimario-100 rounded-full flex items-center justify-center">
-                              <span className="text-blanco-100 font-bold text-sm">
-                                {user.firstName[0]}{user.lastName[0]}
-                              </span>
-                            </div>
+    {user.profileImageUrl ? (
+      <div className="w-10 h-10 rounded-full overflow-hidden">
+        <img
+          src={`/api/image-proxy?url=${encodeURIComponent(user.profileImageUrl)}`}
+          alt={`${user.firstName} ${user.lastName}`}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            const target = e.currentTarget as HTMLImageElement;
+            const fallback = target.nextElementSibling as HTMLElement;
+            target.style.display = 'none';
+            if (fallback) {
+              fallback.style.display = 'flex';
+            }
+          }}
+        />
+        <div className="w-10 h-10 bg-verdeprimario-100 rounded-full flex items-center justify-center" style={{ display: 'none' }}>
+          <span className="text-blanco-100 font-bold text-sm">
+            {user.firstName[0]}{user.lastName[0]}
+          </span>
+        </div>
+      </div>
+    ) : (
+                              <div className="w-10 h-10 bg-verdeprimario-100 rounded-full flex items-center justify-center">
+                                <span className="text-blanco-100 font-bold text-sm">
+                                  {user.firstName[0]}{user.lastName[0]}
+                                </span>
+                              </div>
+                            )}
                             <div>
                               <div className="text-negro-100 font-raleway-bold-16pt">
                                 {user.firstName} {user.lastName}
@@ -739,13 +980,27 @@ export default function AdminUsersPage() {
 
         {/* Edit User Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-negro-100 font-raleway-bold-16pt">Editar Usuario</DialogTitle>
               <DialogDescription className="text-grisprimario-200 font-raleway-medium-14pt">
                 Modifica la información del usuario
               </DialogDescription>
             </DialogHeader>
+            
+            {/* Avatar Upload Section */}
+            <div className="flex flex-col items-center space-y-4 py-4 border-b border-grisprimario-10">
+              <Label className="text-negro-100 font-raleway-medium-14pt">Foto de Perfil</Label>
+              <AvatarUpload
+                currentAvatar={formData.profileImageUrl}
+                onUpload={handleAvatarUpload}
+                onRemove={handleAvatarRemove}
+                requireAuth={true}
+                size="lg"
+                className="mx-auto"
+              />
+            </div>
+
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -789,6 +1044,116 @@ export default function AdminUsersPage() {
                 />
               </div>
 
+              {/* Additional User Information */}
+              <div className="border-t pt-4">
+                <h4 className="text-negro-100 font-raleway-bold-14pt mb-4">Información Adicional</h4>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-city" className="text-negro-100 font-raleway-medium-14pt">Ciudad</Label>
+                    <Input
+                      id="edit-city"
+                      value={formData.city}
+                      onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                      className="border-grisprimario-10 focus:border-verdeprimario-100"
+                      placeholder="Ej: Montevideo"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-department" className="text-negro-100 font-raleway-medium-14pt">Departamento</Label>
+                    <Input
+                      id="edit-department"
+                      value={formData.department}
+                      onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                      className="border-grisprimario-10 focus:border-verdeprimario-100"
+                      placeholder="Ej: Montevideo"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-address" className="text-negro-100 font-raleway-medium-14pt">Dirección</Label>
+                  <Input
+                    id="edit-address"
+                    value={formData.address}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                    className="border-grisprimario-10 focus:border-verdeprimario-100"
+                    placeholder="Dirección completa"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-dateOfBirth" className="text-negro-100 font-raleway-medium-14pt">Fecha de Nacimiento</Label>
+                    <Input
+                      id="edit-dateOfBirth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                      className="border-grisprimario-10 focus:border-verdeprimario-100"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-gender" className="text-negro-100 font-raleway-medium-14pt">Género</Label>
+                    <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
+                      <SelectTrigger className="border-grisprimario-10 focus:border-verdeprimario-100">
+                        <SelectValue placeholder="Seleccionar género" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MALE">Masculino</SelectItem>
+                        <SelectItem value="FEMALE">Femenino</SelectItem>
+                        <SelectItem value="OTHER">Otro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-occupation" className="text-negro-100 font-raleway-medium-14pt">Ocupación</Label>
+                    <Input
+                      id="edit-occupation"
+                      value={formData.occupation}
+                      onChange={(e) => setFormData(prev => ({ ...prev, occupation: e.target.value }))}
+                      className="border-grisprimario-10 focus:border-verdeprimario-100"
+                      placeholder="Ej: Ingeniero Agrónomo"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-company" className="text-negro-100 font-raleway-medium-14pt">Empresa</Label>
+                    <Input
+                      id="edit-company"
+                      value={formData.company}
+                      onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                      className="border-grisprimario-10 focus:border-verdeprimario-100"
+                      placeholder="Nombre de la empresa"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-interests" className="text-negro-100 font-raleway-medium-14pt">Intereses</Label>
+                  <Textarea
+                    id="edit-interests"
+                    value={formData.interests}
+                    onChange={(e) => setFormData(prev => ({ ...prev, interests: e.target.value }))}
+                    className="border-grisprimario-10 focus:border-verdeprimario-100"
+                    placeholder="Describe los intereses del usuario..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="edit-newsletter"
+                    checked={formData.newsletter}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, newsletter: checked }))}
+                  />
+                  <Label htmlFor="edit-newsletter" className="text-negro-100 font-raleway-medium-14pt">Suscribirse al Newsletter</Label>
+                </div>
+              </div>
+              {/* End Additional User Information */}
+
               <div>
                 <Label htmlFor="edit-role" className="text-negro-100 font-raleway-medium-14pt">Rol</Label>
                 <Select value={formData.role} onValueChange={(value: User['role']) => setFormData(prev => ({ ...prev, role: value }))}>
@@ -798,6 +1163,8 @@ export default function AdminUsersPage() {
                   <SelectContent>
                     <SelectItem value="USER">Usuario</SelectItem>
                     <SelectItem value="CONTRACTOR">Contratista</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    <SelectItem value="SUPERADMIN">Super Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

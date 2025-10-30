@@ -1,26 +1,20 @@
 "use client";
 
 import { SearchIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, Check, X } from "lucide-react";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 
-// Service options data
-const serviceOptions = [
-  { id: 1, name: "Cosecha", description: "Servicios de cosecha agrícola", icon: "🌾" },
-  { id: 2, name: "Siembra", description: "Servicios de siembra y plantación", icon: "🌱" },
-  { id: 3, name: "Fumigación", description: "Servicios de fumigación y control de plagas", icon: "🚁" },
-  { id: 4, name: "Fertilización", description: "Servicios de fertilización del suelo", icon: "🌿" },
-  { id: 5, name: "Riego", description: "Servicios de riego y manejo del agua", icon: "💧" },
+// Fallback static options when no data provided
+const fallbackServiceOptions = [
+  { id: "cosecha", name: "Cosecha", description: "Servicios de cosecha agrícola", icon: "🌾" },
+  { id: "siembra", name: "Siembra", description: "Servicios de siembra y plantación", icon: "🌱" },
+  { id: "fumigacion", name: "Fumigación", description: "Servicios de fumigación y control de plagas", icon: "🚁" },
+  { id: "fertilizacion", name: "Fertilización", description: "Servicios de fertilización del suelo", icon: "🌿" },
+  { id: "riego", name: "Riego", description: "Servicios de riego y manejo del agua", icon: "💧" },
 ];
 
-// Location options data
-const locationOptions = [
-  { id: 1, name: "Cerca de ti", description: "Encuentra servicios cerca de tu ubicación", icon: "📍" },
-  { id: 2, name: "Montevideo", description: "Servicios en Montevideo y alrededores", icon: "🏙️" },
-  { id: 3, name: "Canelones", description: "Servicios en Canelones", icon: "🌾" },
-  { id: 4, name: "Colonia", description: "Servicios en Colonia", icon: "🏛️" },
-  { id: 5, name: "San José", description: "Servicios en San José", icon: "🌿" },
-  { id: 6, name: "Florida", description: "Servicios en Florida", icon: "🌱" },
+const fallbackLocationOptions = [
+  { id: "nearby", name: "Cerca de ti", description: "Encuentra servicios cerca de tu ubicación", icon: "📍" },
 ];
 
 // Calendar utility functions
@@ -55,9 +49,9 @@ interface DropdownProps {
   placeholder: string;
   width: string;
   paddingX: string;
-  options: Array<{ id: number; name: string; description: string; icon?: string; value?: string }>;
-  selectedOption: { id: number; name: string; description: string; icon?: string; value?: string } | null;
-  onSelect: (option: { id: number; name: string; description: string; icon?: string; value?: string }) => void;
+  options: Array<{ id: string; name: string; description: string; icon?: string; value?: string }>;
+  selectedOption: { id: string; name: string; description: string; icon?: string; value?: string } | null;
+  onSelect: (option: { id: string; name: string; description: string; icon?: string; value?: string }) => void;
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -115,7 +109,7 @@ const SearchDropdown: React.FC<DropdownProps> = ({
         }
       `} 
       ref={dropdownRef}
-      onClick={onToggle}
+      onClick={() => { if (!isOpen) onToggle(); }}
     >
       <div className="text-gray-700 text-[length:var(--raleway-bold-14pt-font-size)] w-fit font-raleway-bold-14pt font-[number:var(--raleway-bold-14pt-font-weight)] tracking-[var(--raleway-bold-14pt-letter-spacing)] leading-[var(--raleway-bold-14pt-line-height)] whitespace-nowrap [font-style:var(--raleway-bold-14pt-font-style)]">
         {label}
@@ -267,7 +261,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
       days.push(
         <button
           key={day}
-          onClick={() => !isPastDate && handleDateClick(date)}
+          onClick={(e) => { e.stopPropagation(); if (!isPastDate) handleDateClick(date); }}
           disabled={isPastDate}
           className={`
             w-8 h-8 rounded-full text-sm font-medium transition-all duration-150 ease-in-out calendar-date
@@ -328,7 +322,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
         }
       `} 
       ref={dropdownRef}
-      onClick={onToggle}
+      onClick={() => { if (!isOpen) onToggle(); }}
     >
       <div className="text-gray-700 text-[length:var(--raleway-bold-14pt-font-size)] w-fit font-raleway-bold-14pt font-[number:var(--raleway-bold-14pt-font-weight)] tracking-[var(--raleway-bold-14pt-letter-spacing)] leading-[var(--raleway-bold-14pt-line-height)] whitespace-nowrap [font-style:var(--raleway-bold-14pt-font-style)]">
         {label}
@@ -353,13 +347,13 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
             <h3 className="text-lg font-semibold">Seleccionar fechas</h3>
             <div className="flex gap-2">
               <button
-                onClick={handleClear}
+                onClick={(e) => { e.stopPropagation(); handleClear(); }}
                 className="w-10 h-10 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-all duration-150 hover:scale-105 flex items-center justify-center"
               >
                 <X className="w-5 h-5" />
               </button>
               <button
-                onClick={handleConfirm}
+                onClick={(e) => { e.stopPropagation(); handleConfirm(); }}
                 className="w-10 h-10 bg-verdeprimario-100 text-white rounded-full hover:bg-verdeprimario-100/90 transition-all duration-150 hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center"
               >
                 <Check className="w-5 h-5" />
@@ -435,19 +429,58 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
   );
 };
 
-export const ServiceSearchSection = (): JSX.Element => {
-  const [selectedService, setSelectedService] = useState<{ id: number; name: string; description: string; icon?: string } | null>(null);
+interface ServiceSearchSectionProps {
+  categories?: Array<{ id: string; name: string }>;
+  areas?: string[];
+  onSearch?: (payload: { categoryId?: string; area?: string; startDate?: Date | null; endDate?: Date | null }) => void;
+  initialCategoryId?: string;
+  initialArea?: string;
+  initialStartDate?: Date | null;
+  initialEndDate?: Date | null;
+}
+
+export const ServiceSearchSection = ({ categories, areas, onSearch, initialCategoryId, initialArea, initialStartDate, initialEndDate }: ServiceSearchSectionProps): JSX.Element => {
+  const serviceOptions = useMemo(() => (categories && categories.length > 0 ? categories.map(c => ({ id: c.id, name: c.name, description: "" })) : fallbackServiceOptions), [categories]);
+  const serviceOptionsWithAll = useMemo(() => ([{ id: 'all', name: 'Todos', description: 'Todos los servicios' }, ...serviceOptions]), [serviceOptions]);
+  const locationOptions = useMemo(() => (areas && areas.length > 0 ? areas.map(a => ({ id: a, name: a, description: "" })) : fallbackLocationOptions), [areas]);
+  const locationOptionsWithAll = useMemo(() => ([{ id: 'all', name: 'Todas', description: 'Todas las zonas' }, ...locationOptions]), [locationOptions]);
+
+  const [selectedService, setSelectedService] = useState<{ id: string; name: string; description: string; icon?: string } | null>(
+    initialCategoryId ? serviceOptions.find(o => o.id === initialCategoryId) ?? null : null
+  );
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<{ id: number; name: string; description: string; icon?: string } | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{ id: string; name: string; description: string; icon?: string } | null>(
+    initialArea ? { id: initialArea, name: initialArea, description: "" } : null
+  );
   
   const [isServiceOpen, setIsServiceOpen] = useState(false);
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
 
+  useEffect(() => {
+    if (initialStartDate) setStartDate(initialStartDate);
+    if (initialEndDate) setEndDate(initialEndDate);
+  }, [initialStartDate, initialEndDate]);
+
+  const emitSearch = (next: {
+    categoryId?: string;
+    area?: string;
+    startDate?: Date | null;
+    endDate?: Date | null;
+  } = {}) => {
+    onSearch?.({
+      categoryId: next.categoryId !== undefined ? next.categoryId : selectedService?.id,
+      area: next.area !== undefined ? next.area : (selectedLocation ? selectedLocation.id : undefined),
+      startDate: next.startDate !== undefined ? next.startDate : startDate,
+      endDate: next.endDate !== undefined ? next.endDate : endDate,
+    });
+  };
+
   const handleDateSelect = (start: Date | null, end: Date | null) => {
     setStartDate(start);
     setEndDate(end);
+    emitSearch({ startDate: start, endDate: end });
   };
 
   return (
@@ -457,9 +490,9 @@ export const ServiceSearchSection = (): JSX.Element => {
         placeholder="Buscar servicio"
         width="w-[280px]"
         paddingX="px-[45px]"
-        options={serviceOptions}
+        options={serviceOptionsWithAll}
         selectedOption={selectedService}
-        onSelect={setSelectedService}
+        onSelect={(opt) => { setSelectedService(opt); emitSearch({ categoryId: opt?.id }); }}
         isOpen={isServiceOpen}
         onToggle={() => setIsServiceOpen(!isServiceOpen)}
       />
@@ -481,14 +514,17 @@ export const ServiceSearchSection = (): JSX.Element => {
         placeholder="Seleccione la ubicación"
         width="w-[231px]"
         paddingX="px-[45px]"
-        options={locationOptions}
+        options={locationOptionsWithAll}
         selectedOption={selectedLocation}
-        onSelect={setSelectedLocation}
+        onSelect={(opt) => { setSelectedLocation(opt); emitSearch({ area: opt?.id }); }}
         isOpen={isLocationOpen}
         onToggle={() => setIsLocationOpen(!isLocationOpen)}
       />
 
-      <Button className="flex w-[77px] h-[77px] items-center justify-center bg-verdesecundario-100 hover:bg-verdeprimario-100 rounded-full transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg">
+      <Button
+        onClick={() => emitSearch()}
+        className="flex w-[77px] h-[77px] items-center justify-center bg-verdesecundario-100 hover:bg-verdeprimario-100 rounded-full transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+      >
         <SearchIcon className="w-12 h-12 text-white" />
       </Button>
     </section>

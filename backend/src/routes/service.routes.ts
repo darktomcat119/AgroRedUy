@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body, query, param } from 'express-validator';
 import { ServiceController } from '../controllers/service.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { validateRequest } from '../middleware/validation.middleware.js';
+import { validateRequest } from '../middleware/validation.middleware';
 
 const router = Router();
 const serviceController = new ServiceController();
@@ -12,11 +12,14 @@ router.get('/', [
   query('categoryId').optional().isUUID().withMessage('Invalid category ID'),
   query('city').optional().isString().withMessage('City must be a string'),
   query('department').optional().isString().withMessage('Department must be a string'),
+  query('area').optional().isString().withMessage('Area must be a string'),
   query('minPrice').optional().isNumeric().withMessage('Min price must be a number'),
   query('maxPrice').optional().isNumeric().withMessage('Max price must be a number'),
   query('latitude').optional().isNumeric().withMessage('Latitude must be a number'),
   query('longitude').optional().isNumeric().withMessage('Longitude must be a number'),
   query('radius').optional().isNumeric().withMessage('Radius must be a number'),
+  query('startDate').optional().isISO8601().withMessage('startDate must be ISO8601'),
+  query('endDate').optional().isISO8601().withMessage('endDate must be ISO8601'),
   query('search').optional().isString().withMessage('Search must be a string'),
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),

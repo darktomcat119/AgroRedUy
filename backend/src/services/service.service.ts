@@ -7,6 +7,7 @@ export interface CreateServiceData {
   price: number;
   priceMin?: number;
   priceMax?: number;
+  priceCurrency?: string;
   latitude: number;
   longitude: number;
   address: string;
@@ -36,6 +37,7 @@ export interface ServiceFilters {
   categoryId?: string;
   city?: string;
   department?: string;
+  area?: string;
   minPrice?: number;
   maxPrice?: number;
   latitude?: number;
@@ -43,6 +45,8 @@ export interface ServiceFilters {
   radius?: number; // in kilometers
   isActive?: boolean;
   search?: string;
+  startDate?: Date;
+  endDate?: Date;
 }
 
 export interface ServiceWithDetails {
@@ -95,22 +99,25 @@ export interface ServiceWithDetails {
 export class ServiceService {
   async createService(data: CreateServiceData): Promise<ServiceWithDetails> {
     try {
+      const createData: any = {
+        title: data.title,
+        description: data.description,
+        price: data.price,
+        priceMin: data.priceMin,
+        priceMax: data.priceMax,
+        priceCurrency: data.priceCurrency,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        address: data.address,
+        city: data.city,
+        department: data.department,
+        categoryId: data.categoryId,
+        unit_id: data.unit_id,
+        userId: data.userId
+      };
+
       const service = await prisma.service.create({
-        data: {
-          title: data.title,
-          description: data.description,
-          price: data.price,
-          priceMin: data.priceMin,
-          priceMax: data.priceMax,
-          latitude: data.latitude,
-          longitude: data.longitude,
-          address: data.address,
-          city: data.city,
-          department: data.department,
-          categoryId: data.categoryId,
-          unit_id: data.unit_id,
-          userId: data.userId
-        },
+        data: createData,
         include: {
           user: {
             select: {
@@ -164,20 +171,55 @@ export class ServiceService {
         where.categoryId = filters.categoryId;
       }
 
-      if (filters.city) {
-        where.city = { contains: filters.city, mode: 'insensitive' };
+      if (!filters.area) {
+        if (filters.city) {
+          where.city = { contains: filters.city, mode: 'insensitive' };
+        }
+
+        if (filters.department) {
+          where.department = { contains: filters.department, mode: 'insensitive' };
+        }
       }
 
-      if (filters.department) {
-        where.department = { contains: filters.department, mode: 'insensitive' };
+      if (filters.area) {
+        const areaCond = {
+          OR: [
+            { city: { contains: filters.area, mode: 'insensitive' } },
+            { department: { contains: filters.area, mode: 'insensitive' } }
+          ]
+        } as any;
+        if (where.AND) {
+          (where.AND as any[]).push(areaCond);
+        } else {
+          where.AND = [areaCond];
+        }
+      }
+
+      // If both city and department are provided and have the same value, treat as a generic area OR
+      if (!filters.area && filters.city && filters.department && filters.city.toLowerCase() === filters.department.toLowerCase()) {
+        // Remove strict city/department filters in favor of OR
+        delete (where as any).city;
+        delete (where as any).department;
+        const val = filters.city;
+        const areaCond = {
+          OR: [
+            { city: { contains: val, mode: 'insensitive' } },
+            { department: { contains: val, mode: 'insensitive' } }
+          ]
+        } as any;
+        if (where.AND) {
+          (where.AND as any[]).push(areaCond);
+        } else {
+          where.AND = [areaCond];
+        }
       }
 
       if (filters.minPrice !== undefined) {
-        where.price = { gte: filters.minPrice };
+        where.pricePerHour = { gte: filters.minPrice } as any;
       }
 
       if (filters.maxPrice !== undefined) {
-        where.price = { ...where.price, lte: filters.maxPrice };
+        where.pricePerHour = { ...(where as any).pricePerHour, lte: filters.maxPrice } as any;
       }
 
       if (filters.isActive !== undefined) {
@@ -206,6 +248,20 @@ export class ServiceService {
         where.longitude = {
           gte: filters.longitude - lngDelta,
           lte: filters.longitude + lngDelta
+        };
+      }
+
+      // Availability date range filtering
+      if (filters.startDate && filters.endDate) {
+        const start = new Date(filters.startDate);
+        start.setHours(0,0,0,0);
+        const end = new Date(filters.endDate);
+        end.setHours(23,59,59,999);
+        where.availability = {
+          some: {
+            isAvailable: true,
+            date: { gte: start, lte: end }
+          }
         };
       }
 
@@ -277,6 +333,10 @@ export class ServiceService {
           category: true,
           images: {
             orderBy: { sortOrder: 'asc' }
+          },
+          availability: {
+            where: { isAvailable: true },
+            orderBy: { date: 'asc' }
           },
           reviews: {
             include: {

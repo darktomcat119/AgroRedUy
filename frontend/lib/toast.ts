@@ -1,4 +1,12 @@
 import toast from 'react-hot-toast';
+import React from 'react';
+import { 
+  FaCheckCircle, 
+  FaExclamationTriangle, 
+  FaInfoCircle, 
+  FaTimesCircle, 
+  FaSpinner
+} from 'react-icons/fa';
 
 // Toast configuration for consistent styling across the app
 const toastConfig = {
@@ -68,27 +76,33 @@ const toastConfig = {
   }
 };
 
-// Custom toast functions with consistent styling
+// Custom toast functions with consistent styling and SVG icons
 export const customToast = {
   success: (message: string) => {
-    return toast.success(message, toastConfig.success);
+    return toast.success(message, {
+      ...toastConfig.success,
+      icon: React.createElement(FaCheckCircle, { className: "text-white", size: 20 })
+    });
   },
   
   error: (message: string) => {
-    return toast.error(message, toastConfig.error);
+    return toast.error(message, {
+      ...toastConfig.error,
+      icon: React.createElement(FaTimesCircle, { className: "text-white", size: 20 })
+    });
   },
   
   warning: (message: string) => {
     return toast(message, {
       ...toastConfig.warning,
-      icon: '⚠️'
+      icon: React.createElement(FaExclamationTriangle, { className: "text-white", size: 20 })
     });
   },
   
   info: (message: string) => {
     return toast(message, {
       ...toastConfig.info,
-      icon: 'ℹ️'
+      icon: React.createElement(FaInfoCircle, { className: "text-white", size: 20 })
     });
   },
   
@@ -101,7 +115,8 @@ export const customToast = {
         borderRadius: '8px',
         padding: '12px 16px',
         fontSize: '14px'
-      }
+      },
+      icon: React.createElement(FaSpinner, { className: "text-white animate-spin", size: 20 })
     });
   },
   
@@ -110,45 +125,45 @@ export const customToast = {
   }
 };
 
-// Specific toast messages for common actions
+// Specific toast messages for common actions with SVG icons
 export const toastMessages = {
   // User Management
-  userCreated: (name: string) => `✅ Usuario "${name}" creado exitosamente`,
-  userUpdated: (name: string) => `✅ Usuario "${name}" actualizado exitosamente`,
-  userDeleted: (name: string) => `✅ Usuario "${name}" eliminado exitosamente`,
-  userActivated: (name: string) => `✅ Usuario "${name}" activado exitosamente`,
-  userDeactivated: (name: string) => `✅ Usuario "${name}" desactivado exitosamente`,
+  userCreated: (name: string) => `Usuario "${name}" creado exitosamente`,
+  userUpdated: (name: string) => `Usuario "${name}" actualizado exitosamente`,
+  userDeleted: (name: string) => `Usuario "${name}" eliminado exitosamente`,
+  userActivated: (name: string) => `Usuario "${name}" activado exitosamente`,
+  userDeactivated: (name: string) => `Usuario "${name}" desactivado exitosamente`,
   
   // Service Management
-  serviceCreated: (name: string) => `✅ Servicio "${name}" creado exitosamente`,
-  serviceUpdated: (name: string) => `✅ Servicio "${name}" actualizado exitosamente`,
-  serviceDeleted: (name: string) => `✅ Servicio "${name}" eliminado exitosamente`,
-  serviceActivated: (name: string) => `✅ Servicio "${name}" activado exitosamente`,
-  serviceDeactivated: (name: string) => `✅ Servicio "${name}" desactivado exitosamente`,
+  serviceCreated: (name: string) => `Servicio "${name}" creado exitosamente`,
+  serviceUpdated: (name: string) => `Servicio "${name}" actualizado exitosamente`,
+  serviceDeleted: (name: string) => `Servicio "${name}" eliminado exitosamente`,
+  serviceActivated: (name: string) => `Servicio "${name}" activado exitosamente`,
+  serviceDeactivated: (name: string) => `Servicio "${name}" desactivado exitosamente`,
   
   // Booking Management
-  bookingCreated: (id: string) => `✅ Reserva #${id} creada exitosamente`,
-  bookingUpdated: (id: string) => `✅ Reserva #${id} actualizada exitosamente`,
-  bookingDeleted: (id: string) => `✅ Reserva #${id} eliminada exitosamente`,
-  bookingConfirmed: (id: string) => `✅ Reserva #${id} confirmada exitosamente`,
-  bookingCancelled: (id: string) => `✅ Reserva #${id} cancelada exitosamente`,
+  bookingCreated: (id: string) => `Reserva #${id} creada exitosamente`,
+  bookingUpdated: (id: string) => `Reserva #${id} actualizada exitosamente`,
+  bookingDeleted: (id: string) => `Reserva #${id} eliminada exitosamente`,
+  bookingConfirmed: (id: string) => `Reserva #${id} confirmada exitosamente`,
+  bookingCancelled: (id: string) => `Reserva #${id} cancelada exitosamente`,
   
   // Authentication
-  loginSuccess: (email: string) => `✅ Bienvenido, ${email}`,
-  logoutSuccess: () => `✅ Sesión cerrada exitosamente`,
-  passwordChanged: () => `✅ Contraseña actualizada exitosamente`,
+  loginSuccess: (email: string) => `Bienvenido, ${email}`,
+  logoutSuccess: () => `Sesión cerrada exitosamente`,
+  passwordChanged: () => `Contraseña actualizada exitosamente`,
   
   // General Errors
-  networkError: () => `❌ Error de conexión. Verifica tu internet`,
-  serverError: () => `❌ Error del servidor. Intenta más tarde`,
-  validationError: (field: string) => `❌ Error de validación en ${field}`,
-  unauthorizedError: () => `❌ No tienes permisos para esta acción`,
-  notFoundError: (item: string) => `❌ ${item} no encontrado`,
+  networkError: () => `Error de conexión. Verifica tu internet`,
+  serverError: () => `Error del servidor. Intenta más tarde`,
+  validationError: (field: string) => `Error de validación en ${field}`,
+  unauthorizedError: () => `No tienes permisos para esta acción`,
+  notFoundError: (item: string) => `${item} no encontrado`,
   
   // General Success
-  dataLoaded: () => `✅ Datos cargados exitosamente`,
-  dataSaved: () => `✅ Datos guardados exitosamente`,
-  operationCompleted: () => `✅ Operación completada exitosamente`
+  dataLoaded: () => `Datos cargados exitosamente`,
+  dataSaved: () => `Datos guardados exitosamente`,
+  operationCompleted: () => `Operación completada exitosamente`
 };
 
 export default customToast;

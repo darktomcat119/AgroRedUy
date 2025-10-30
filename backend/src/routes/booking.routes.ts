@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body, query, param } from 'express-validator';
 import { BookingController } from '../controllers/booking.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { validateRequest } from '../middleware/validation.middleware.js';
+import { validateRequest } from '../middleware/validation.middleware';
 
 const router = Router();
 const bookingController = new BookingController();

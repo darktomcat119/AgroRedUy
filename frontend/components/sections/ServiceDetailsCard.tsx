@@ -1,13 +1,24 @@
 import React from "react";
 
-const serviceDetails = {
-  name: "Ricardo Mollo",
-  price: "USD 200",
-  contact: "099 123 456",
-  description: "Hace más de 20 años que trabajamos con un equipo responsable para que tu cosecha no sea un problema"
-};
+interface ServiceDetailsProps {
+  contractorName?: string;
+  priceLabel?: string;
+  contact?: string;
+  description?: string;
+}
 
-export const ServiceDetailsCard = (): JSX.Element => {
+export const ServiceDetailsCard = ({
+  contractorName,
+  priceLabel,
+  contact,
+  description
+}: ServiceDetailsProps = {}): JSX.Element => {
+  const serviceDetails = {
+    name: contractorName ?? "Ricardo Mollo",
+    price: priceLabel ?? "USD 200",
+    contact: contact ?? "099 123 456",
+    description: description ?? "Hace más de 20 años que trabajamos con un equipo responsable para que tu cosecha no sea un problema"
+  };
   return (
     <div className="bg-white rounded-[20px] p-6 shadow-[4px_4px_4px_#00000040]">
       {/* Service Details with inline layout */}

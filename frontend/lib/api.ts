@@ -24,6 +24,16 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+export interface AdminUsersResponse {
+  users: any[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
 export interface AdminServicesResponse {
   services: any[];
   pagination: {
@@ -69,20 +79,12 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
-
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
-    }
+    const headers = new Headers(options.headers as HeadersInit);
+    if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+    if (this.token) headers.set('Authorization', `Bearer ${this.token}`);
 
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-      });
+      const response = await fetch(url, { ...options, headers });
 
       const data = await response.json();
 
@@ -150,8 +152,8 @@ class ApiClient {
       body: JSON.stringify(contractorData),
     });
 
-    if (response.success && response.data?.accessToken) {
-      this.setToken(response.data.accessToken);
+    if ((response as any).success && (response as any).data?.accessToken) {
+      this.setToken((response as any).data.accessToken);
     }
 
     return response;
@@ -177,8 +179,8 @@ class ApiClient {
       body: JSON.stringify(credentials),
     });
 
-    if (response.success && response.data?.accessToken) {
-      this.setToken(response.data.accessToken);
+    if ((response as any).success && (response as any).data?.accessToken) {
+      this.setToken((response as any).data.accessToken);
     }
 
     return response;
@@ -195,8 +197,8 @@ class ApiClient {
       body: JSON.stringify({ refreshToken }),
     });
 
-    if (response.success && response.data?.accessToken) {
-      this.setToken(response.data.accessToken);
+    if ((response as any).success && (response as any).data?.accessToken) {
+      this.setToken((response as any).data.accessToken);
     }
 
     return response;
@@ -207,6 +209,9 @@ class ApiClient {
     categoryId?: string;
     city?: string;
     department?: string;
+    area?: string;
+    startDate?: string;
+    endDate?: string;
     minPrice?: number;
     maxPrice?: number;
     latitude?: number;
@@ -355,7 +360,7 @@ class ApiClient {
       }
     });
 
-    return this.request<PaginatedResponse<any>>(`/admin/users?${params.toString()}`);
+    return this.request<AdminUsersResponse>(`/admin/users?${params.toString()}`);
   }
 
   async getUser(id: string) {
@@ -371,6 +376,16 @@ class ApiClient {
     role?: string;
     isActive?: boolean;
     emailVerified?: boolean;
+    address?: string;
+    city?: string;
+    department?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    occupation?: string;
+    company?: string;
+    interests?: string;
+    newsletter?: boolean;
+    profileImageUrl?: string;
   }) {
     return this.request<any>('/admin/users', {
       method: 'POST',
@@ -408,6 +423,73 @@ class ApiClient {
 
     return this.request<AdminServicesResponse>(`/admin/services?${params.toString()}`);
   }
+
+  async createAdminService(data: {
+    title: string;
+    description: string;
+    price: number;
+    priceCurrency?: string;
+    priceMin?: number;
+    priceMax?: number;
+    latitude: number;
+    longitude: number;
+    address: string;
+    city: string;
+    department: string;
+    categoryId: string;
+    unit_id: string;
+    images?: string[];
+    schedule?: { startDate: string; endDate: string; startTime: string; endTime: string };
+  }) {
+    return this.request<any>('/admin/services', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getUnits() {
+    return this.request<Array<{ id: string; name: string; symbol: string; description?: string }>>('/admin/units');
+  }
+
+  async updateAdminService(id: string, data: Partial<{
+    title: string;
+    description: string;
+    price: number;
+    priceCurrency: string;
+    priceMin: number;
+    priceMax: number;
+    latitude: number;
+    longitude: number;
+    address: string;
+    city: string;
+    department: string;
+    categoryId: string;
+    unit_id: string;
+    isActive: boolean;
+  }>) {
+    return this.request<any>(`/admin/services/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAdminService(id: string) {
+    return this.request(`/admin/services/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAdminServiceDetails(id: string) {
+    return this.request<any>(`/admin/services/${id}`);
+  }
+
+  async deleteAdminServiceImage(serviceId: string, imageId: string) {
+    return this.request<void>(`/admin/services/${serviceId}/images/${imageId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // duplicate removed
 
   // Reports API methods
   async generateReport(reportData: {

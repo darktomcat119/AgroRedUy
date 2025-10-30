@@ -1,23 +1,21 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Navigation } from '@/components/Navigation';
-import { ServiceSearchSection } from '@/components/sections/ServiceSearchSection';
-import { ServiceDetailsCard } from '@/components/sections/ServiceDetailsCard';
-import { ImageGallerySection } from '@/components/sections/ImageGallerySection';
-import { LocationBadgesSection } from '@/components/sections/LocationBadgesSection';
-import { CalendarSection } from '@/components/sections/CalendarSection';
-import { Button } from '@/components/ui/button';
-import { ServiceMap } from '@/components/maps/ServiceMap';
-import { apiClient } from '@/lib/api';
-
-const IG: any = ImageGallerySection;
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { DynamicNavigation } from "@/components/DynamicNavigation";
+import { ServiceSearchSection } from "@/components/sections/ServiceSearchSection";
+import { ServiceDetailsCard } from "@/components/sections/ServiceDetailsCard";
+import { ImageGallerySection } from "@/components/sections/ImageGallerySection";
+import { LocationBadgesSection } from "@/components/sections/LocationBadgesSection";
+import { CalendarSection } from "@/components/sections/CalendarSection";
+import { Button } from "@/components/ui/button";
+import { ServiceMap } from "@/components/maps/ServiceMap";
+import { apiClient } from "@/lib/api";
 
 export default function ServiceDetailsPage(): JSX.Element {
   const params = useParams();
   const router = useRouter();
-  const id = useMemo(() => (params?.id as string) || '', [params]);
+  const id = useMemo(() => (params?.id as string) || "", [params]);
 
   const [loading, setLoading] = useState(true);
   const [service, setService] = useState<any | null>(null);
@@ -33,38 +31,37 @@ export default function ServiceDetailsPage(): JSX.Element {
       setLoading(false);
     };
     load();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const navigationItems = [
-    { label: 'Inicio', active: false, href: '/' },
-    { label: 'Servicios', active: true, href: '/servicios' },
-  ];
-  const authItems = [
-    { label: 'Contacto', active: false, href: '/contacto' },
-    { label: 'Iniciar Sesión', active: false, href: '/login' },
+    { label: "Inicio", active: false, href: "/" },
+    { label: "Servicios", active: true, href: "/services/list" },
   ];
 
   const galleryImages = (service?.images || []).map((img: any) => img.imageUrl);
-  const contractorName = service ? `${service.user?.firstName || ''} ${service.user?.lastName || ''}`.trim() : undefined;
-  const priceLabel = service ? `UYU ${Math.round(service.price)}/hora` : undefined;
+  const contractorName = service ? `${service.user?.firstName || ""} ${service.user?.lastName || ""}`.trim() : undefined;
+  const priceUnit = (service as any)?.priceCurrency || (service as any)?.currency || "UYU";
+  const priceLabel = service ? `${priceUnit} ${Math.round((service as any).price || (service as any).pricePerHour || 0)}/hora` : undefined;
   const contact = service?.user?.email || undefined;
   const description = service?.description || undefined;
 
   return (
     <div className="bg-grisprimario-100 w-full min-h-screen flex flex-col">
-      <Navigation leftItems={navigationItems} rightItems={authItems} variant="service" />
+      <DynamicNavigation leftItems={navigationItems} variant="service" />
 
       <main className="flex-1 w-full py-8">
         <div className="w-full flex justify-center mb-8">
           <ServiceSearchSection
             onSearch={({ categoryId, area, startDate, endDate }) => {
-              const params = new URLSearchParams();
-              if (categoryId && categoryId !== 'all') params.set('categoryId', categoryId);
-              if (area && area !== 'all') params.set('area', area);
-              if (startDate) params.set('startDate', startDate.toISOString());
-              if (endDate) params.set('endDate', endDate.toISOString());
-              (router as any).push(`/services/list${params.toString() ? `?${params.toString()}` : ''}`);
+              const qs = new URLSearchParams();
+              if (categoryId && categoryId !== "all") qs.set("categoryId", categoryId);
+              if (area && area !== "all") qs.set("area", area);
+              if (startDate) qs.set("startDate", startDate.toISOString());
+              if (endDate) qs.set("endDate", endDate.toISOString());
+              router.push(`/services/list${qs.toString() ? `?${qs.toString()}` : ""}`);
             }}
           />
         </div>
@@ -73,7 +70,7 @@ export default function ServiceDetailsPage(): JSX.Element {
           <div className="flex gap-8">
             <div className="flex-1">
               <ServiceDetailsCard contractorName={contractorName} priceLabel={priceLabel} contact={contact} description={description} />
-              <div className="mt-6"><IG images={galleryImages} /></div>
+              <div className="mt-6">{(ImageGallerySection as any)({ images: galleryImages })}</div>
               <div className="mt-6"><LocationBadgesSection /></div>
             </div>
             <div className="w-[300px] flex-shrink-0 flex flex-col items-center">

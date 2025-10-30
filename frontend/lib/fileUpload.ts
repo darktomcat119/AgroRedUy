@@ -109,6 +109,77 @@ export class FileUploadService {
   }
 
   /**
+   * @description Upload category icon
+   */
+  async uploadCategoryIcon(file: File, options: FileUploadOptions = {}): Promise<UploadResult> {
+    try {
+      // Validate file
+      const validation = this.validateFile(file, {
+        ...options,
+        allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml']
+      });
+      
+      if (!validation.valid) {
+        return {
+          success: false,
+          error: validation.error
+        };
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${this.baseUrl}/api/v1/files/upload/category-icon`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: result.error || 'Upload failed'
+        };
+      }
+
+      return {
+        success: true,
+        url: result.data.url,
+        filename: result.data.filename,
+        size: result.data.size
+      };
+    } catch (error) {
+      console.error('Error uploading category icon:', error);
+      return {
+        success: false,
+        error: 'Network error. Please try again.'
+      };
+    }
+  }
+
+  /**
+   * @description Generic file upload method
+   */
+  async uploadFile(file: File, type: 'avatar' | 'service-image' | 'category-icon'): Promise<UploadResult> {
+    switch (type) {
+      case 'avatar':
+        // For avatar uploads, we need to get the token from localStorage
+        const token = localStorage.getItem('authToken') || '';
+        return this.uploadAvatar(file, token);
+      case 'service-image':
+        return this.uploadServiceImage(file, 'temp-service', '', 0);
+      case 'category-icon':
+        return this.uploadCategoryIcon(file);
+      default:
+        return {
+          success: false,
+          error: 'Invalid upload type'
+        };
+    }
+  }
+
+  /**
    * @description Upload service image
    */
   async uploadServiceImage(

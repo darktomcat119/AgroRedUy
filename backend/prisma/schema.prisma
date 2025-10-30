@@ -66,6 +66,7 @@ model Service {
   price        Decimal
   priceMin     Decimal?       @map("price_min")
   priceMax     Decimal?       @map("price_max")
+  priceCurrency String        @default("UYU") @map("price_currency")
   latitude     Decimal
   longitude    Decimal
   address      String

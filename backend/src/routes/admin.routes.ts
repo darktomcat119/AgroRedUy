@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller';
 import { authenticateToken, requireSuperAdmin, requireAdmin } from '../middleware/auth.middleware';
 import { body, param, query } from 'express-validator';
-import { validateRequest } from '../middleware/validation.middleware.js';
+import { validateRequest } from '../middleware/validation.middleware';
 
 const router = Router();
 const adminController = new AdminController();
@@ -35,12 +35,39 @@ router.post('/users',
     body('firstName').isString().trim().isLength({ min: 1, max: 50 }).withMessage('First name must be 1-50 characters'),
     body('lastName').isString().trim().isLength({ min: 1, max: 50 }).withMessage('Last name must be 1-50 characters'),
     body('phone').optional().isString().trim().isLength({ min: 8, max: 20 }).withMessage('Phone must be 8-20 characters'),
-    body('role').optional().isIn(['USER', 'CONTRACTOR']).withMessage('Invalid role'),
+    body('role').optional().isIn(['USER', 'CONTRACTOR', 'ADMIN', 'SUPERADMIN']).withMessage('Invalid role'),
     body('isActive').optional().isBoolean().withMessage('isActive must be boolean'),
-    body('emailVerified').optional().isBoolean().withMessage('emailVerified must be boolean')
+    body('emailVerified').optional().isBoolean().withMessage('emailVerified must be boolean'),
+    body('address').optional().isString().trim().isLength({ max: 200 }).withMessage('Address must be max 200 characters'),
+    body('city').optional().isString().trim().isLength({ max: 100 }).withMessage('City must be max 100 characters'),
+    body('department').optional().isString().trim().isLength({ max: 100 }).withMessage('Department must be max 100 characters'),
+    body('dateOfBirth').optional().isISO8601().withMessage('Date of birth must be a valid date'),
+    body('gender').optional().isIn(['MALE', 'FEMALE', 'OTHER']).withMessage('Invalid gender'),
+    body('occupation').optional().isString().trim().isLength({ max: 100 }).withMessage('Occupation must be max 100 characters'),
+    body('company').optional().isString().trim().isLength({ max: 100 }).withMessage('Company must be max 100 characters'),
+    body('interests').optional().custom((value) => {
+      if (Array.isArray(value)) {
+        return value.every((v) => typeof v === 'string');
+      }
+      if (typeof value === 'string') {
+        return true;
+      }
+      throw new Error('Interests must be a string or an array of strings');
+    }).withMessage('Interests must be a string or an array of strings'),
+    body('newsletter').optional().isBoolean().withMessage('Newsletter must be boolean'),
+    body('profileImageUrl').optional().isString().withMessage('Profile image URL must be a string')
   ],
   validateRequest,
   adminController.createUser
+);
+
+router.get('/users/:id',
+  requireAdmin,
+  [
+    param('id').isUUID().withMessage('Invalid user ID')
+  ],
+  validateRequest,
+  adminController.getUserDetails
 );
 
 router.put('/users/:id',
@@ -51,9 +78,27 @@ router.put('/users/:id',
     body('lastName').optional().isString().trim().isLength({ min: 1, max: 50 }).withMessage('Last name must be 1-50 characters'),
     body('email').optional().isEmail().withMessage('Invalid email format'),
     body('phone').optional().isString().trim().isLength({ min: 8, max: 20 }).withMessage('Phone must be 8-20 characters'),
-    body('role').optional().isIn(['USER', 'CONTRACTOR']).withMessage('Invalid role'),
+    body('role').optional().isIn(['USER', 'CONTRACTOR', 'ADMIN', 'SUPERADMIN']).withMessage('Invalid role'),
     body('isActive').optional().isBoolean().withMessage('isActive must be boolean'),
-    body('emailVerified').optional().isBoolean().withMessage('emailVerified must be boolean')
+    body('emailVerified').optional().isBoolean().withMessage('emailVerified must be boolean'),
+    body('address').optional().isString().trim().isLength({ max: 200 }).withMessage('Address must be max 200 characters'),
+    body('city').optional().isString().trim().isLength({ max: 100 }).withMessage('City must be max 100 characters'),
+    body('department').optional().isString().trim().isLength({ max: 100 }).withMessage('Department must be max 100 characters'),
+    body('dateOfBirth').optional().isISO8601().withMessage('Date of birth must be a valid date'),
+    body('gender').optional().isIn(['MALE', 'FEMALE', 'OTHER']).withMessage('Invalid gender'),
+    body('occupation').optional().isString().trim().isLength({ max: 100 }).withMessage('Occupation must be max 100 characters'),
+    body('company').optional().isString().trim().isLength({ max: 100 }).withMessage('Company must be max 100 characters'),
+    body('interests').optional().custom((value) => {
+      if (Array.isArray(value)) {
+        return value.every((v) => typeof v === 'string');
+      }
+      if (typeof value === 'string') {
+        return true;
+      }
+      throw new Error('Interests must be a string or an array of strings');
+    }).withMessage('Interests must be a string or an array of strings'),
+    body('newsletter').optional().isBoolean().withMessage('Newsletter must be boolean'),
+    body('profileImageUrl').optional().isString().withMessage('Profile image URL must be a string')
   ],
   validateRequest,
   adminController.updateUser
@@ -72,8 +117,8 @@ router.delete('/users/:id',
 router.get('/services',
   requireAdmin,
   [
-    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
     query('search').optional().isString().withMessage('Search must be a string'),
     query('category').optional().isString().withMessage('Category must be a string'),
     query('status').optional().isIn(['active', 'inactive']).withMessage('Invalid status'),
@@ -83,17 +128,63 @@ router.get('/services',
   adminController.getServices
 );
 
+router.get('/services/:id',
+  requireAdmin,
+  [
+    param('id').isUUID().withMessage('Invalid service ID')
+  ],
+  validateRequest,
+  adminController.getServiceDetails
+);
+
+// Units listing for validation/select options
+router.get('/units', requireAdmin, adminController.getUnits);
+
+// Create service
+router.post('/services',
+  requireAdmin,
+  [
+    body('title').isString().trim().isLength({ min: 3, max: 120 }).withMessage('Title must be 3-120 characters'),
+    body('description').isString().trim().isLength({ min: 10, max: 5000 }).withMessage('Description must be 10-5000 characters'),
+    body('price').isFloat({ gt: 0 }).withMessage('Price must be greater than 0'),
+    body('priceCurrency').optional().isIn(['UYU','USD']).withMessage('Invalid price currency'),
+    body('priceMin').optional().isFloat({ gt: 0 }).withMessage('priceMin must be greater than 0'),
+    body('priceMax').optional().isFloat({ gt: 0 }).withMessage('priceMax must be greater than 0'),
+    body('latitude').isFloat({ min: -90, max: 90 }).withMessage('Invalid latitude'),
+    body('longitude').isFloat({ min: -180, max: 180 }).withMessage('Invalid longitude'),
+    body('address').isString().trim().isLength({ min: 3, max: 200 }).withMessage('Address must be 3-200 characters'),
+    body('city').isString().trim().isLength({ min: 2, max: 100 }).withMessage('City must be 2-100 characters'),
+    body('department').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Department must be 2-100 characters'),
+    body('categoryId').isUUID().withMessage('Invalid categoryId'),
+    body('unit_id').isString().trim().isLength({ min: 1, max: 50 }).withMessage('unit_id is required'),
+    body('images').optional().isArray({ max: 10 }).withMessage('images must be an array of max 10 items'),
+    body('images.*').optional().isString().withMessage('image url must be string'),
+    body('schedule').optional().isObject().withMessage('schedule must be an object'),
+    body('schedule.startDate').optional().isISO8601().withMessage('Invalid startDate'),
+    body('schedule.endDate').optional().isISO8601().withMessage('Invalid endDate'),
+    // Times optional; if omitted, backend will default to full-day
+  ],
+  validateRequest,
+  adminController.createService
+);
+
 router.put('/services/:id',
   requireAdmin,
   [
     param('id').isUUID().withMessage('Invalid service ID'),
     body('title').optional().isString().trim().isLength({ min: 1, max: 200 }).withMessage('Title must be 1-200 characters'),
-    body('description').optional().isString().trim().isLength({ min: 1, max: 1000 }).withMessage('Description must be 1-1000 characters'),
-    body('category').optional().isString().trim().isLength({ min: 1, max: 50 }).withMessage('Category must be 1-50 characters'),
-    body('price').optional().isNumeric().withMessage('Price must be a number'),
-    body('location').optional().isString().trim().isLength({ min: 1, max: 100 }).withMessage('Location must be 1-100 characters'),
-    body('isActive').optional().isBoolean().withMessage('isActive must be boolean'),
-    body('isVerified').optional().isBoolean().withMessage('isVerified must be boolean')
+    body('description').optional().isString().trim().isLength({ min: 1, max: 5000 }).withMessage('Description must be 1-5000 characters'),
+    body('categoryId').optional().isUUID().withMessage('Invalid categoryId'),
+    body('price').optional().isFloat({ gt: 0 }).withMessage('Price must be a number > 0'),
+    body('priceCurrency').optional().isIn(['UYU','USD']).withMessage('Invalid price currency'),
+    body('priceMin').optional().isFloat({ gt: 0 }).withMessage('priceMin must be > 0'),
+    body('priceMax').optional().isFloat({ gt: 0 }).withMessage('priceMax must be > 0'),
+    body('latitude').optional().isFloat({ min: -90, max: 90 }).withMessage('Invalid latitude'),
+    body('longitude').optional().isFloat({ min: -180, max: 180 }).withMessage('Invalid longitude'),
+    body('address').optional().isString().trim().isLength({ min: 3, max: 200 }).withMessage('Address must be 3-200 characters'),
+    body('city').optional().isString().trim().isLength({ min: 2, max: 100 }).withMessage('City must be 2-100 characters'),
+    body('department').optional().isString().trim().isLength({ min: 2, max: 100 }).withMessage('Department must be 2-100 characters'),
+    body('isActive').optional().isBoolean().withMessage('isActive must be boolean')
   ],
   validateRequest,
   adminController.updateService
@@ -108,48 +199,15 @@ router.delete('/services/:id',
   adminController.deleteService
 );
 
-// Reports routes (Super Admin only)
-router.post('/reports/generate',
-  requireSuperAdmin,
+// Delete a service image
+router.delete('/services/:serviceId/images/:imageId',
+  requireAdmin,
   [
-    body('type').isIn(['user_activity', 'service_performance', 'revenue_analysis', 'booking_trends', 'contractor_performance']).withMessage('Invalid report type'),
-    body('period').isIn(['last_7_days', 'last_30_days', 'last_90_days', 'custom']).withMessage('Invalid period'),
-    body('startDate').optional().isISO8601().withMessage('Invalid start date format'),
-    body('endDate').optional().isISO8601().withMessage('Invalid end date format'),
-    body('format').optional().isIn(['json', 'csv', 'pdf']).withMessage('Invalid format')
+    param('serviceId').isUUID().withMessage('Invalid service ID'),
+    param('imageId').isUUID().withMessage('Invalid image ID')
   ],
   validateRequest,
-  adminController.generateReport
-);
-
-router.get('/reports',
-  requireSuperAdmin,
-  [
-    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-    query('type').optional().isIn(['user_activity', 'service_performance', 'revenue_analysis', 'booking_trends', 'contractor_performance']).withMessage('Invalid report type'),
-    query('status').optional().isIn(['pending', 'completed', 'failed']).withMessage('Invalid status')
-  ],
-  validateRequest,
-  adminController.getReports
-);
-
-router.get('/reports/:id',
-  requireSuperAdmin,
-  [
-    param('id').isString().trim().isLength({ min: 1 }).withMessage('Invalid report ID')
-  ],
-  validateRequest,
-  adminController.getReportDetails
-);
-
-router.delete('/reports/:id',
-  requireSuperAdmin,
-  [
-    param('id').isString().trim().isLength({ min: 1 }).withMessage('Invalid report ID')
-  ],
-  validateRequest,
-  adminController.deleteReport
+  adminController.deleteServiceImage
 );
 
 // Settings routes (Super Admin only)
@@ -182,9 +240,9 @@ router.get('/health',
   adminController.getSystemHealth
 );
 
-// Category management routes (Super Admin only)
+// Category management routes
 router.get('/categories',
-  requireSuperAdmin,
+  requireAdmin,
   adminController.getCategories
 );
 
@@ -225,8 +283,8 @@ router.delete('/categories/:id',
 router.get('/security/logs',
   requireSuperAdmin,
   [
-    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
     query('level').optional().isIn(['info', 'warning', 'error']).withMessage('Invalid log level'),
     query('type').optional().isString().withMessage('Type must be a string'),
     query('startDate').optional().isISO8601().withMessage('Invalid start date format'),

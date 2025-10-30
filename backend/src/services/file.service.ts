@@ -49,6 +49,7 @@ export class FileService {
       this.uploadDir,
       path.join(this.uploadDir, 'avatars'),
       path.join(this.uploadDir, 'services'),
+      path.join(this.uploadDir, 'category-icons'),
       path.join(this.uploadDir, 'temp')
     ];
 
@@ -138,7 +139,7 @@ export class FileService {
       const ext = path.extname(file.originalname);
       const filename = `avatar-${userId}-${Date.now()}${ext}`;
       const outputPath = path.join(this.uploadDir, 'avatars', filename);
-      const url = `/uploads/avatars/${filename}`;
+      const url = `${process.env.API_URL || 'http://localhost:3001'}/uploads/avatars/${filename}`;
 
       // Process the image (resize to 400x400)
       await this.processImage(tempPath, outputPath, {
@@ -191,6 +192,75 @@ export class FileService {
   }
 
   /**
+   * @description Upload and process category icon
+   */
+  async uploadCategoryIcon(
+    file: Express.Multer.File
+  ): Promise<UploadResult> {
+    try {
+      const tempPath = file.path;
+      const ext = path.extname(file.originalname);
+      const filename = `category-icon-${Date.now()}${ext}`;
+      const outputPath = path.join(this.uploadDir, 'category-icons', filename);
+      const url = `${process.env.API_URL || 'http://localhost:3001'}/uploads/category-icons/${filename}`;
+
+      // Check if it's an SVG file
+      if (ext.toLowerCase() === '.svg') {
+        // For SVG files, just copy without processing
+        await fs.promises.copyFile(tempPath, outputPath);
+      } else {
+        // Process other image types (resize to 128x128 for icons)
+        await this.processImage(tempPath, outputPath, {
+          width: 128,
+          height: 128,
+          quality: 90,
+          format: 'png'
+        });
+      }
+
+      // Clean up temp file
+      try {
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+      } catch (unlinkError) {
+        logger.warn('Could not delete temp file:', unlinkError);
+        // Don't throw error, just log warning
+      }
+
+      return {
+        success: true,
+        filename,
+        originalName: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype,
+        url
+      };
+    } catch (error) {
+      logger.error('Error uploading category icon:', error);
+      
+      // Clean up temp file if it exists
+      if (file.path && fs.existsSync(file.path)) {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (unlinkError) {
+          logger.warn('Could not delete temp file:', unlinkError);
+        }
+      }
+      
+      return {
+        success: false,
+        filename: '',
+        originalName: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype,
+        url: '',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * @description Upload service image
    */
   async uploadServiceImage(
@@ -213,8 +283,24 @@ export class FileService {
         format: 'jpeg'
       });
 
-      // Clean up temp file
-      fs.unlinkSync(tempPath);
+      // Clean up temp file (Windows can hold locks briefly)
+      try {
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+      } catch (unlinkError: any) {
+        logger.warn('Could not delete temp file immediately, will retry:', unlinkError);
+        setTimeout(() => {
+          try {
+            if (fs.existsSync(tempPath)) {
+              fs.unlinkSync(tempPath);
+              logger.info(`Temp file deleted on retry: ${tempPath}`);
+            }
+          } catch (e) {
+            logger.warn('Temp file still could not be deleted:', e);
+          }
+        }, 1000);
+      }
 
       return {
         success: true,
@@ -229,7 +315,14 @@ export class FileService {
       
       // Clean up temp file if it exists
       if (file.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
+        try {
+          fs.unlinkSync(file.path);
+        } catch (unlinkError) {
+          logger.warn('Could not delete temp file after error, will retry');
+          setTimeout(() => {
+            try { fs.existsSync(file.path) && fs.unlinkSync(file.path); } catch {}
+          }, 1000);
+        }
       }
 
       return {

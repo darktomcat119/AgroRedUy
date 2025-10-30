@@ -39,16 +39,27 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:", "http://localhost:3001"],
+      // Allow images to be loaded cross-origin from dev frontends and backend
+      imgSrc: [
+        "'self'",
+        "data:",
+        "blob:",
+        "https:",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:3001"
+      ],
     },
   },
+  // Critical for allowing cross-origin images (avatars) to be consumed by the frontend
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
 // CORS configuration
 const corsOptions = {
   origin: process.env['NODE_ENV'] === 'production' 
     ? [process.env['CORS_ORIGIN'] || 'https://agrored.uy']
-    : ['http://localhost:3000', 'http://localhost:3001'],
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'],
   credentials: true,
   optionsSuccessStatus: 200,
 };

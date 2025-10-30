@@ -26,12 +26,15 @@ export class ServiceController {
         categoryId,
         city,
         department,
+        area,
         minPrice,
         maxPrice,
         latitude,
         longitude,
         radius,
         search,
+        startDate,
+        endDate,
         page = 1,
         limit = 20
       } = req.query;
@@ -44,14 +47,23 @@ export class ServiceController {
       if (categoryId) filters.categoryId = categoryId as string;
       if (city) filters.city = city as string;
       if (department) filters.department = department as string;
+      if (area) filters.area = area as string;
       if (minPrice) filters.minPrice = parseFloat(minPrice as string);
       if (maxPrice) filters.maxPrice = parseFloat(maxPrice as string);
       if (latitude) filters.latitude = parseFloat(latitude as string);
       if (longitude) filters.longitude = parseFloat(longitude as string);
       if (radius) filters.radius = parseFloat(radius as string);
       if (search) filters.search = search as string;
+      if (startDate) {
+        const sd = new Date(startDate as string);
+        if (!isNaN(sd.getTime())) filters.startDate = sd;
+      }
+      if (endDate) {
+        const ed = new Date(endDate as string);
+        if (!isNaN(ed.getTime())) filters.endDate = ed;
+      }
 
-      const result = await this.serviceService.getServices(filters);
+      const result = await this.serviceService.getServices(filters, filters.page, filters.limit);
 
       res.json({
         success: true,

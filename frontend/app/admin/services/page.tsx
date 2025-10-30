@@ -1,3 +1,4 @@
+
 "use client";
 
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -5,7 +6,7 @@ import { AdminOrSuperAdmin } from '@/components/admin/RoleGuard';
 import { useAuth, useAdminAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Briefcase, Plus, Search, Edit, Trash2, Eye, MapPin, Calendar, DollarSign, Star, Filter, Tag, Settings } from 'lucide-react';
+import { Briefcase, Plus, Search, Edit, Trash2, Eye, MapPin, Calendar, DollarSign, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -47,15 +48,7 @@ interface Service {
   updatedAt: string;
 }
 
-interface Category {
-  id: string;
-  name: string;
-  description?: string;
-  iconUrl?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+ 
 
 export default function AdminServicesPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -86,16 +79,7 @@ export default function AdminServicesPage() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
 
-  // Category management states
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [categoryFormData, setCategoryFormData] = useState({
-    name: '',
-    description: '',
-    iconUrl: ''
-  });
+  
 
   // Form states
   const [formData, setFormData] = useState({
@@ -130,11 +114,7 @@ export default function AdminServicesPage() {
     filterServices();
   }, [services, searchTerm, categoryFilter, statusFilter]);
 
-  useEffect(() => {
-    if (isAuthenticated && isSuperAdmin) {
-      loadCategories();
-    }
-  }, [isAuthenticated, isSuperAdmin]);
+  
 
   const loadServices = async () => {
     try {
@@ -161,83 +141,7 @@ export default function AdminServicesPage() {
     }
   };
 
-  // Category management functions
-  const loadCategories = async () => {
-    try {
-      const response = await apiClient.getCategories();
-      if (response.success && response.data) {
-        setCategories(response.data);
-      } else {
-        console.error('Failed to load categories:', response.error);
-        toast.error('Error al cargar categorías');
-      }
-    } catch (error) {
-      console.error('Error loading categories:', error);
-      toast.error('Error al cargar categorías');
-    }
-  };
-
-  const handleCreateCategory = async () => {
-    try {
-      const response = await apiClient.createCategory(categoryFormData);
-      if (response.success && response.data) {
-        toast.success('Categoría creada exitosamente');
-        setIsCategoryDialogOpen(false);
-        setCategoryFormData({ name: '', description: '', iconUrl: '' });
-        loadCategories();
-      } else {
-        toast.error(response.error?.message || 'Error al crear categoría');
-      }
-    } catch (error) {
-      console.error('Error creating category:', error);
-      toast.error('Error al crear categoría');
-    }
-  };
-
-  const handleUpdateCategory = async () => {
-    if (!selectedCategory) return;
-    
-    try {
-      const response = await apiClient.updateCategory(selectedCategory.id, categoryFormData);
-      if (response.success && response.data) {
-        toast.success('Categoría actualizada exitosamente');
-        setIsEditCategoryDialogOpen(false);
-        setSelectedCategory(null);
-        setCategoryFormData({ name: '', description: '', iconUrl: '' });
-        loadCategories();
-      } else {
-        toast.error(response.error?.message || 'Error al actualizar categoría');
-      }
-    } catch (error) {
-      console.error('Error updating category:', error);
-      toast.error('Error al actualizar categoría');
-    }
-  };
-
-  const handleDeleteCategory = async (categoryId: string) => {
-    try {
-      const response = await apiClient.deleteCategory(categoryId);
-      if (response.success) {
-        toast.success('Categoría eliminada exitosamente');
-        loadCategories();
-      } else {
-        toast.error(response.error?.message || 'Error al eliminar categoría');
-      }
-    } catch (error) {
-      console.error('Error deleting category:', error);
-      toast.error('Error al eliminar categoría');
-    }
-  };
-
-  const openEditCategoryDialog = (category: Category) => {
-    setSelectedCategory(category);
-    setCategoryFormData({
-      name: category.name,
-      description: category.description || '',
-      iconUrl: category.iconUrl || ''
-    });
-    setIsEditCategoryDialogOpen(true);
-  };
+  
 
   const filterServices = () => {
     let filtered = services;
@@ -503,89 +407,7 @@ export default function AdminServicesPage() {
           </Card>
         </div>
 
-        {/* Category Management Section (SuperAdmin only) */}
-        {isSuperAdmin && (
-          <div className="mb-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Tag className="w-6 h-6 text-verdeprimario-100" />
-                    <CardTitle className="text-xl font-bold text-negro-100 font-raleway-bold-20pt">
-                      Gestión de Categorías
-                    </CardTitle>
-                  </div>
-                  <Button
-                    onClick={() => setIsCategoryDialogOpen(true)}
-                    className="bg-verdeprimario-100 hover:bg-verdeprimario-200 text-blanco-100"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nueva Categoría
-                  </Button>
-                </div>
-                <CardDescription className="text-grisprimario-200 font-raleway-medium-14pt">
-                  Administra las categorías de servicios disponibles
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {categories.map((category) => (
-                    <div key={category.id} className="border border-grisprimario-10 rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          {category.iconUrl ? (
-                            <img src={category.iconUrl} alt={category.name} className="w-6 h-6" />
-                          ) : (
-                            <Tag className="w-6 h-6 text-grisprimario-200" />
-                          )}
-                          <h3 className="font-semibold text-negro-100 font-raleway-bold-16pt">
-                            {category.name}
-                          </h3>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditCategoryDialog(category)}
-                            className="h-8 w-8 p-0 hover:bg-grisprimario-10"
-                          >
-                            <Edit className="w-4 h-4 text-grisprimario-200" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteCategory(category.id)}
-                            className="h-8 w-8 p-0 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </div>
-                      {category.description && (
-                        <p className="text-sm text-grisprimario-200 font-raleway-medium-14pt mb-2">
-                          {category.description}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <Badge variant={category.isActive ? "default" : "secondary"} className="text-xs">
-                          {category.isActive ? 'Activa' : 'Inactiva'}
-                        </Badge>
-                        <span className="text-xs text-grisprimario-200 font-raleway-medium-12pt">
-                          {new Date(category.createdAt).toLocaleDateString('es-UY')}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {categories.length === 0 && (
-                    <div className="col-span-full text-center py-8 text-grisprimario-200 font-raleway-medium-16pt">
-                      No hay categorías disponibles
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        
 
         {/* Actions Bar */}
         <div className="bg-blanco-100 rounded-lg shadow-sm border border-grisprimario-10 p-6 mb-6">
@@ -1099,135 +921,7 @@ export default function AdminServicesPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Category Management Dialogs */}
-        {/* Create Category Dialog */}
-        <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-negro-100 font-raleway-bold-16pt">Nueva Categoría</DialogTitle>
-              <DialogDescription className="text-grisprimario-200 font-raleway-medium-14pt">
-                Crea una nueva categoría de servicios
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="category-name" className="text-negro-100 font-raleway-medium-14pt">Nombre *</Label>
-                <Input
-                  id="category-name"
-                  value={categoryFormData.name}
-                  onChange={(e) => setCategoryFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ej: Agricultura, Ganadería..."
-                  className="border-grisprimario-10 focus:border-verdeprimario-100"
-                />
-              </div>
-              <div>
-                <Label htmlFor="category-description" className="text-negro-100 font-raleway-medium-14pt">Descripción</Label>
-                <Textarea
-                  id="category-description"
-                  value={categoryFormData.description}
-                  onChange={(e) => setCategoryFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descripción de la categoría..."
-                  className="border-grisprimario-10 focus:border-verdeprimario-100"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="category-icon" className="text-negro-100 font-raleway-medium-14pt">URL del Icono</Label>
-                <Input
-                  id="category-icon"
-                  value={categoryFormData.iconUrl}
-                  onChange={(e) => setCategoryFormData(prev => ({ ...prev, iconUrl: e.target.value }))}
-                  placeholder="https://ejemplo.com/icono.png"
-                  className="border-grisprimario-10 focus:border-verdeprimario-100"
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsCategoryDialogOpen(false);
-                    setCategoryFormData({ name: '', description: '', iconUrl: '' });
-                  }}
-                  className="flex-1 border-grisprimario-10 text-grisprimario-200 hover:bg-grisprimario-10"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleCreateCategory}
-                  disabled={!categoryFormData.name.trim()}
-                  className="flex-1 bg-verdeprimario-100 hover:bg-verdeprimario-200 text-blanco-100 rounded-full"
-                >
-                  Crear Categoría
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Category Dialog */}
-        <Dialog open={isEditCategoryDialogOpen} onOpenChange={setIsEditCategoryDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-negro-100 font-raleway-bold-16pt">Editar Categoría</DialogTitle>
-              <DialogDescription className="text-grisprimario-200 font-raleway-medium-14pt">
-                Modifica los datos de la categoría
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-category-name" className="text-negro-100 font-raleway-medium-14pt">Nombre *</Label>
-                <Input
-                  id="edit-category-name"
-                  value={categoryFormData.name}
-                  onChange={(e) => setCategoryFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ej: Agricultura, Ganadería..."
-                  className="border-grisprimario-10 focus:border-verdeprimario-100"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-category-description" className="text-negro-100 font-raleway-medium-14pt">Descripción</Label>
-                <Textarea
-                  id="edit-category-description"
-                  value={categoryFormData.description}
-                  onChange={(e) => setCategoryFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descripción de la categoría..."
-                  className="border-grisprimario-10 focus:border-verdeprimario-100"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-category-icon" className="text-negro-100 font-raleway-medium-14pt">URL del Icono</Label>
-                <Input
-                  id="edit-category-icon"
-                  value={categoryFormData.iconUrl}
-                  onChange={(e) => setCategoryFormData(prev => ({ ...prev, iconUrl: e.target.value }))}
-                  placeholder="https://ejemplo.com/icono.png"
-                  className="border-grisprimario-10 focus:border-verdeprimario-100"
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditCategoryDialogOpen(false);
-                    setSelectedCategory(null);
-                    setCategoryFormData({ name: '', description: '', iconUrl: '' });
-                  }}
-                  className="flex-1 border-grisprimario-10 text-grisprimario-200 hover:bg-grisprimario-10"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleUpdateCategory}
-                  disabled={!categoryFormData.name.trim()}
-                  className="flex-1 bg-verdeprimario-100 hover:bg-verdeprimario-200 text-blanco-100 rounded-full"
-                >
-                  Guardar Cambios
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        
         </div>
       </AdminLayout>
     </AdminOrSuperAdmin>

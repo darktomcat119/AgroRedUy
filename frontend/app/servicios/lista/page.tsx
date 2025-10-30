@@ -1,47 +1,23 @@
-import React from "react";
+"use client";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Navigation } from "@/components/Navigation";
+import { DynamicNavigation } from "@/components/DynamicNavigation";
+import { apiClient } from "@/lib/api";
+import { useRouter } from "next/navigation";
 import { ServiceSearchSection } from "@/components/sections/ServiceSearchSection";
 
-const serviceData = [
-  {
-    left: "left-[61px]",
-    title: "Cosecha de Manzana",
-    cosechador: "Ricardo Mollo",
-    precio: "USD 200",
-    contacto: "099 123 456",
-    descripcion:
-      "Hace más de 20 años que trabajamos con un equipo responsable para que tu cosecha no sea un problema",
-  },
-  {
-    left: "left-[395px]",
-    title: "Cosecha de Manzana",
-    cosechador: "Ricardo Mollo",
-    precio: "USD 200",
-    contacto: "099 123 456",
-    descripcion:
-      "Hace más de 20 años que trabajamos con un equipo responsable para que tu cosecha no sea un problema",
-  },
-  {
-    left: "left-[729px]",
-    title: "Cosecha de Manzana",
-    cosechador: "Ricardo Mollo",
-    precio: "USD 200",
-    contacto: "099 123 456",
-    descripcion:
-      "Hace más de 20 años que trabajamos con un equipo responsable para que tu cosecha no sea un problema",
-  },
-  {
-    left: "left-[1063px]",
-    title: "Cosecha de Manzana",
-    cosechador: "Ricardo Mollo",
-    precio: "USD 200",
-    contacto: "099 123 456",
-    descripcion:
-      "Hace más de 20 años que trabajamos con un equipo responsable para que tu cosecha no sea un problema",
-  },
-];
+interface PublicServiceItem {
+  id: string;
+  title: string;
+  description: string;
+  address: string;
+  city: string;
+  department: string;
+  pricePerHour?: number;
+  price?: number;
+  user?: { firstName?: string; lastName?: string };
+}
 
 const buttonPositions = [
   { left: "left-[112px]" },
@@ -52,7 +28,7 @@ const buttonPositions = [
 
 const navigationItems = [
   { label: "Inicio", active: false, href: "/" },
-  { label: "Servicios", active: true, href: "/servicios" },
+  { label: "Servicios", active: true, href: "/services/list" },
 ];
 
 const authItems = [
@@ -61,11 +37,107 @@ const authItems = [
 ];
 
 export default function ServiciosListaPage(): JSX.Element {
+  const router = useRouter();
+  const [services, setServices] = useState<PublicServiceItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isFetchingMore, setIsFetchingMore] = useState<boolean>(false);
+  const [page, setPage] = useState<number>(1);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const requestedPagesRef = useRef<Set<number>>(new Set([1]));
+  const limit = 12;
+
+  async function loadPage(nextPage: number) {
+    try {
+      const res: any = await apiClient.getServices({ page: nextPage, limit });
+      let items: PublicServiceItem[] = [];
+      let totalPages: number | undefined;
+      let total: number | undefined;
+
+      if (res?.success && res?.data) {
+        const payload = res.data;
+        // Try common shapes
+        if (Array.isArray(payload?.services)) {
+          items = payload.services as PublicServiceItem[];
+          total = payload.total;
+          totalPages = payload.totalPages ?? payload?.pagination?.pages;
+        } else if (Array.isArray(payload?.data)) {
+          items = payload.data as PublicServiceItem[];
+          total = payload.total;
+          totalPages = payload.totalPages ?? payload?.pagination?.pages;
+        }
+      }
+
+      if (!Array.isArray(items)) items = [];
+
+      setServices(prev => {
+        const seen = new Set(prev.map(s => s.id));
+        const merged = [...prev];
+        for (const it of items) {
+          if (!seen.has(it.id)) {
+            merged.push(it);
+            seen.add(it.id);
+          }
+        }
+        return merged;
+      });
+
+      // Determine hasMore
+      if (typeof totalPages === 'number') {
+        setHasMore(nextPage < totalPages);
+      } else if (typeof total === 'number') {
+        const fetchedSoFar = (nextPage) * limit;
+        setHasMore(fetchedSoFar < total);
+      } else {
+        setHasMore(items.length === limit);
+      }
+      setPage(nextPage);
+    } catch {
+      setHasMore(false);
+    }
+  }
+
+  useEffect(() => {
+    (async () => {
+      try {
+        await loadPage(1);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Infinite scroll handler on list container
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(async () => {
+        ticking = false;
+        if (!hasMore || isFetchingMore) return;
+        const threshold = 200; // px from bottom
+        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        if (distanceFromBottom < threshold) {
+          const nextPage = page + 1;
+          if (requestedPagesRef.current.has(nextPage)) return;
+          requestedPagesRef.current.add(nextPage);
+          setIsFetchingMore(true);
+          await loadPage(nextPage);
+          setIsFetchingMore(false);
+        }
+      });
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll as any);
+  }, [page, hasMore, isFetchingMore]);
+
   return (
-    <div className="bg-grisprimario-100 w-full min-h-screen flex flex-col">
-      <Navigation
+    <div className="bg-grisprimario-100 w-full min-h-screen flex flex-col overflow-x-hidden">
+      <DynamicNavigation
         leftItems={navigationItems}
-        rightItems={authItems}
         variant="service"
       />
 
@@ -74,134 +146,82 @@ export default function ServiciosListaPage(): JSX.Element {
         <div className="w-full flex justify-center mb-8">
           <ServiceSearchSection />
         </div>
-
-        {/* Filter buttons in a single horizontal line */}
-        <div className="w-full max-w-6xl mx-auto px-4 mb-8">
-          <div className="flex justify-start mt-4">
-            <div className="flex items-center">
-              {/* Service button */}
-              <div className="inline-flex h-[39px] items-center gap-2.5 px-[30px] py-2 bg-verdeprimario-100 rounded-[50px]">
-                <div className="mt-[-1.00px] text-blanco-100 text-[length:var(--raleway-bold-20pt-font-size)] font-raleway-bold-20pt font-[number:var(--raleway-bold-20pt-font-weight)] tracking-[var(--raleway-bold-20pt-letter-spacing)] leading-[var(--raleway-bold-20pt-line-height)] whitespace-nowrap [font-style:var(--raleway-bold-20pt-font-style)]">
-                  Servicio:
-                </div>
-                <div className="mt-[-1.00px] font-[number:var(--raleway-regular-20pt-font-weight)] text-blanco-100 text-[length:var(--raleway-regular-20pt-font-size)] font-raleway-regular-20pt tracking-[var(--raleway-regular-20pt-letter-spacing)] leading-[var(--raleway-regular-20pt-line-height)] whitespace-nowrap [font-style:var(--raleway-regular-20pt-font-style)]">
-                  Cosecha
-                </div>
-              </div>
-
-              {/* Crop filter buttons */}
-              <div className="inline-flex h-[39px] items-center gap-[3px] pl-[9px] pr-3.5 py-[3px] bg-verdesecundario-100 rounded-3xl ml-2">
-                <div className="flex flex-col w-[33px] h-[33px] items-center justify-center gap-2.5 p-1">
-                  <img
-                    className="w-[20px] h-[20px]"
-                    alt="Crop icon"
-                    src="/figmaAssets/icono-productor.svg"
-                  />
-                </div>
-                <div className="font-[number:var(--raleway-medium-16pt-font-weight)] text-blanco-100 text-[length:var(--raleway-medium-16pt-font-size)] font-raleway-medium-16pt tracking-[var(--raleway-medium-16pt-letter-spacing)] leading-[var(--raleway-medium-16pt-line-height)] whitespace-nowrap [font-style:var(--raleway-medium-16pt-font-style)]">
-                  Soja
-                </div>
-              </div>
-
-              <div className="inline-flex h-[39px] items-center gap-[3px] pl-[9px] pr-3.5 py-[3px] bg-verdesecundario-100 rounded-3xl ml-2">
-                <div className="flex flex-col w-[33px] h-[33px] items-center justify-center gap-2.5 p-1">
-                  <img
-                    className="w-[20px] h-[20px]"
-                    alt="Crop icon"
-                    src="/figmaAssets/icono-productor.svg"
-                  />
-                </div>
-                <div className="font-[number:var(--raleway-medium-16pt-font-weight)] text-blanco-100 text-[length:var(--raleway-medium-16pt-font-size)] font-raleway-medium-16pt tracking-[var(--raleway-medium-16pt-letter-spacing)] leading-[var(--raleway-medium-16pt-line-height)] whitespace-nowrap [font-style:var(--raleway-medium-16pt-font-style)]">
-                  Trigo
-                </div>
-              </div>
-
-              <div className="inline-flex h-[39px] items-center gap-[3px] pl-[9px] pr-3.5 py-[3px] bg-verdesecundario-100 rounded-3xl ml-2">
-                <div className="flex flex-col w-[33px] h-[33px] items-center justify-center gap-2.5 p-1">
-                  <img
-                    className="w-[20px] h-[20px]"
-                    alt="Crop icon"
-                    src="/figmaAssets/icono-productor.svg"
-                  />
-                </div>
-                <div className="font-[number:var(--raleway-medium-16pt-font-weight)] text-blanco-100 text-[length:var(--raleway-medium-16pt-font-size)] font-raleway-medium-16pt tracking-[var(--raleway-medium-16pt-letter-spacing)] leading-[var(--raleway-medium-16pt-line-height)] whitespace-nowrap [font-style:var(--raleway-medium-16pt-font-style)]">
-                  Cebada
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <h2 className="text-center text-4xl font-semibold text-verdeprimario-100 mb-8">
+        {/* removed legacy badges/filter row */}
+        {/* Section Title */}
+        <h2 className="text-center text-3xl sm:text-4xl font-semibold text-verdeprimario-100 mb-8">
           Servicios disponibles
         </h2>
 
-        {/* Services Grid */}
-        <div className="w-full max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {serviceData.map((service, index) => (
-              <div key={`service-${index}`} className="flex flex-col">
-                <div className="w-full h-[39px] bg-verdeprimario-100 shadow-[3px_3px_4px_#00000040] rounded-[50px] flex items-center justify-center mb-4">
-                  <span className="font-raleway-bold-20pt font-[number:var(--raleway-bold-20pt-font-weight)] text-blanco-100 text-[length:var(--raleway-bold-20pt-font-size)] tracking-[var(--raleway-bold-20pt-letter-spacing)] leading-[var(--raleway-bold-20pt-line-height)] [font-style:var(--raleway-bold-20pt-font-style)]">
-                    {service.title}
-                  </span>
-                </div>
+        {/* Services Grid (scrollable container) */}
+        <div className="w-full max-w-[1440px] mx-auto px-6">
+          {loading ? (
+            <div className="text-center text-blanco-100 py-10">Cargando servicios...</div>
+          ) : services.length === 0 ? (
+            <div className="text-center text-blanco-100 py-10">No hay servicios disponibles.</div>
+          ) : (
+            <div ref={listRef} className="max-h-[70vh] overflow-y-auto overflow-x-hidden pr-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-items-center">
+              {services.map((service) => {
+                const contractorName = `${service.user?.firstName || ''} ${service.user?.lastName || ''}`.trim() || 'Contratista';
+                const price = typeof service.pricePerHour === 'number' ? service.pricePerHour : Number(service.price || 0);
+                const currency = (service as any).priceCurrency || (service as any).currency || 'UYU';
+                return (
+                  <div key={service.id} className="flex flex-col items-stretch w-[315px] pb-6">
+                    {/* Title pill */}
+                    <div className="w-full h-[35px] bg-verdeprimario-100 shadow-[0_6px_10px_rgba(0,0,0,0.25)] rounded-[50px] flex items-center justify-center mb-2">
+                      <span className="font-raleway-bold-16pt text-blanco-100 text-[16px]">
+                        {service.title}
+                      </span>
+                    </div>
 
-                <Card className="flex flex-col w-full h-[279px] items-center justify-center bg-white rounded-[25px] shadow-[4px_4px_4px_#00000040]">
-            <CardContent className="p-0 w-full flex flex-col items-center">
-              <div className="h-9 flex flex-col w-[265px] items-start justify-center gap-2.5">
-                <div className="flex items-center gap-3.5 px-4 py-2.5 flex-1 self-stretch w-full bg-white border-b-[0.7px] [border-bottom-style:solid] border-[#c8c8c8]">
-                  <div className="mt-[-0.70px] font-[number:var(--raleway-bold-14pt-font-weight)] whitespace-nowrap w-fit font-raleway-bold-14pt text-negro-100 text-[length:var(--raleway-bold-14pt-font-size)] tracking-[var(--raleway-bold-14pt-letter-spacing)] leading-[var(--raleway-bold-14pt-line-height)] [font-style:var(--raleway-bold-14pt-font-style)]">
-                    Cosechador:
-                  </div>
-                  <div className="mt-[-0.70px] font-[number:var(--raleway-medium-14pt-font-weight)] whitespace-nowrap w-fit font-raleway-medium-14pt text-negro-100 text-[length:var(--raleway-medium-14pt-font-size)] tracking-[var(--raleway-medium-14pt-letter-spacing)] leading-[var(--raleway-medium-14pt-line-height)] [font-style:var(--raleway-medium-14pt-font-style)]">
-                    {service.cosechador}
-                  </div>
-                </div>
-              </div>
+                    {/* Card */}
+                    <Card className="w-[315px] h-[279px] bg-white rounded-[20px] border border-[#e6e6e6] shadow-[0_6px_12px_rgba(0,0,0,0.15)] overflow-hidden">
+                      <CardContent className="p-0">
+                        <div className="px-6 py-5 space-y-4">
+                          {/* Row: Contractor */}
+                          <div className="grid grid-cols-[120px_1fr] gap-2 items-start">
+                            <div className="font-raleway-bold-14pt font-semibold text-negro-100 text-[13px] sm:text-[14px]">Cosechador:</div>
+                            <div className="font-raleway-medium-14pt text-negro-100 text-[13px] sm:text-[14px]">{contractorName}</div>
+                          </div>
+                          <div className="h-px bg-[#e6e6e6]" />
+                          {/* Row: Price */}
+                          <div className="grid grid-cols-[120px_1fr] gap-2 items-start">
+                            <div className="font-raleway-bold-14pt font-semibold text-negro-100 text-[13px] sm:text:[14px]">Precio por hora:</div>
+                            <div className="font-raleway-medium-14pt text-negro-100 text-[13px] sm:text-[14px]">{price > 0 ? `${price} ${currency}` : '-'}</div>
+                          </div>
+                          <div className="h-px bg-[#e6e6e6]" />
+                          {/* Row: Description */}
+                          <div className="grid grid-cols-[120px_1fr] gap-2 items-start">
+                            <div className="font-raleway-bold-14pt font-semibold text-negro-100 text-[13px] sm:text-[14px]">Descripción</div>
+                            <div className="font-raleway-medium-14pt text-negro-100 leading-relaxed text-[13px] sm:text-[14px] break-words line-clamp-4">
+                              {service.description}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-              <div className="h-12 flex flex-col w-[265px] items-start justify-center gap-2.5">
-                <div className="flex items-center gap-3.5 px-4 py-2.5 flex-1 self-stretch w-full bg-white border-b-[0.7px] [border-bottom-style:solid] border-[#c8c8c8]">
-                  <div className="mt-[-2.70px] mb-[-1.30px] font-[number:var(--raleway-bold-14pt-font-weight)] w-fit font-raleway-bold-14pt text-negro-100 text-[length:var(--raleway-bold-14pt-font-size)] tracking-[var(--raleway-bold-14pt-letter-spacing)] leading-[var(--raleway-bold-14pt-line-height)] [font-style:var(--raleway-bold-14pt-font-style)]">
-                    Precio x<br />
-                    hectárea estimado:
+                    {/* CTA */}
+                    <Button
+                      className="w-[240px] h-[35px] bg-naranja-100 shadow-[0px_6px_10px_rgba(0,0,0,0.25)] rounded-[50px] hover:bg-naranja-100/90 -mt-4 mx-auto"
+                      onClick={() => router.push(`/services/${service.id}`)}
+                    >
+                      <span className="font-raleway-bold-16pt text-blanco-100 text-[16px]">
+                        Ver disponibilidad
+                      </span>
+                    </Button>
                   </div>
-                  <div className="w-fit whitespace-nowrap font-raleway-medium-14pt font-[number:var(--raleway-medium-14pt-font-weight)] text-negro-100 text-[length:var(--raleway-medium-14pt-font-size)] tracking-[var(--raleway-medium-14pt-letter-spacing)] leading-[var(--raleway-medium-14pt-line-height)] [font-style:var(--raleway-medium-14pt-font-style)]">
-                    {service.precio}
-                  </div>
-                </div>
+                );
+              })}
               </div>
-
-              <div className="h-9 flex flex-col w-[265px] items-start justify-center gap-2.5">
-                <div className="flex items-center gap-3.5 px-4 py-2.5 flex-1 self-stretch w-full bg-white border-b-[0.7px] [border-bottom-style:solid] border-[#c8c8c8]">
-                  <div className="mt-[-0.70px] font-[number:var(--raleway-bold-14pt-font-weight)] whitespace-nowrap w-fit font-raleway-bold-14pt text-negro-100 text-[length:var(--raleway-bold-14pt-font-size)] tracking-[var(--raleway-bold-14pt-letter-spacing)] leading-[var(--raleway-bold-14pt-line-height)] [font-style:var(--raleway-bold-14pt-font-style)]">
-                    Contacto:
-                  </div>
-                  <div className="mt-[-0.70px] font-[number:var(--raleway-medium-14pt-font-weight)] whitespace-nowrap w-fit font-raleway-medium-14pt text-negro-100 text-[length:var(--raleway-medium-14pt-font-size)] tracking-[var(--raleway-medium-14pt-letter-spacing)] leading-[var(--raleway-medium-14pt-line-height)] [font-style:var(--raleway-medium-14pt-font-style)]">
-                    {service.contacto}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex w-[265px] h-[116px] items-center gap-3.5 px-4 py-2.5 bg-white border-b-[0.7px] [border-bottom-style:solid] border-[#c8c8c8]">
-                <div className="font-[number:var(--raleway-bold-14pt-font-weight)] whitespace-nowrap w-fit font-raleway-bold-14pt text-negro-100 text-[length:var(--raleway-bold-14pt-font-size)] tracking-[var(--raleway-bold-14pt-letter-spacing)] leading-[var(--raleway-bold-14pt-line-height)] [font-style:var(--raleway-bold-14pt-font-style)]">
-                  Descripción
-                </div>
-                <div className="self-stretch w-[147px] mt-[-0.70px] mr-[-8.00px] font-raleway-medium-14pt font-[number:var(--raleway-medium-14pt-font-weight)] text-negro-100 text-[length:var(--raleway-medium-14pt-font-size)] tracking-[var(--raleway-medium-14pt-letter-spacing)] leading-[var(--raleway-medium-14pt-line-height)] [font-style:var(--raleway-medium-14pt-font-style)]">
-                  {service.descripcion}
-                </div>
-              </div>
-            </CardContent>
-                </Card>
-                
-                <Button className="w-[213px] h-[35px] bg-naranja-100 shadow-[0px_4px_4px_#00000040] rounded-[50px] hover:bg-naranja-100/90 mt-4 mx-auto">
-                  <span className="[font-family:'Raleway',Helvetica] font-bold text-blanco-100 text-base tracking-[0] leading-[normal] whitespace-nowrap">
-                    Ver disponibilidad
-                  </span>
-                </Button>
-              </div>
-            ))}
-          </div>
+              {isFetchingMore && (
+                <div className="text-center text-blanco-100 py-4">Cargando más...</div>
+              )}
+              {!hasMore && services.length > 0 && (
+                <div className="text-center text-grisprimario-200 py-4">No hay más resultados</div>
+              )}
+            </div>
+          )}
         </div>
       </main>
 

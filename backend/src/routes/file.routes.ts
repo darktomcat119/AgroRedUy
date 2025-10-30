@@ -3,6 +3,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { fileService } from '../services/file.service';
 import { UserService } from '../services/user.service';
 import { logger } from '../config/logger';
+import { prisma } from '../config/database';
 
 const userService = new UserService();
 
@@ -82,6 +83,65 @@ router.post('/avatar', authenticateToken, async (req: Request, res: Response) =>
 });
 
 /**
+ * @description Upload category icon
+ */
+router.post('/category-icon', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const upload = fileService.getMulterConfig().single('file');
+    
+    upload(req, res, async (err) => {
+      if (err) {
+        logger.error('Multer error:', err);
+        res.status(400).json({
+          success: false,
+          message: err.message,
+          data: null
+        });
+        return;
+      }
+
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          message: 'No file uploaded',
+          data: null
+        });
+        return;
+      }
+
+      const result = await fileService.uploadCategoryIcon(req.file);
+
+      if (!result.success) {
+        res.status(400).json({
+          success: false,
+          message: result.error || 'Failed to upload category icon',
+          data: null
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        message: 'Category icon uploaded successfully',
+        data: {
+          url: result.url,
+          filename: result.filename,
+          size: result.size,
+          mimetype: result.mimetype
+        }
+      });
+    });
+  } catch (error) {
+    logger.error('Error in category icon upload:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      data: null
+    });
+  }
+});
+
+/**
  * @description Upload service image
  */
 router.post('/service', authenticateToken, async (req: Request, res: Response) => {
@@ -127,15 +187,40 @@ router.post('/service', authenticateToken, async (req: Request, res: Response) =
         });
       }
 
-      res.json({
-        success: true,
-        message: 'Service image uploaded successfully',
-        data: {
-          url: result.url,
-          filename: result.filename,
-          size: result.size
-        }
-      });
+      // Persist image record in DB so UI can fetch it later
+      try {
+        const created = await prisma.serviceImage.create({
+          data: {
+            serviceId: String(serviceId),
+            imageUrl: result.url,
+            sortOrder: index,
+            isPrimary: index === 0
+          }
+        });
+
+        res.json({
+          success: true,
+          message: 'Service image uploaded successfully',
+          data: {
+            id: created.id,
+            url: created.imageUrl,
+            sortOrder: created.sortOrder,
+            isPrimary: created.isPrimary
+          }
+        });
+      } catch (dbError) {
+        logger.error('Failed to create service image record:', dbError);
+        // Still return upload success so UI doesn't break, but flag missing DB record
+        res.json({
+          success: true,
+          message: 'Service image uploaded (DB record failed)',
+          data: {
+            url: result.url,
+            filename: result.filename,
+            size: result.size
+          }
+        });
+      }
     });
   } catch (error) {
     logger.error('Error in service image upload:', error);
