@@ -466,7 +466,12 @@ class ApiClient {
     categoryId: string;
     unit_id: string;
     isActive: boolean;
+    subBadges?: Array<{ name: string; iconUrl?: string }>;
+    radius?: number;
+    mapZoom?: number;
+    schedule?: { startDate: string; endDate: string };
   }>) {
+    console.log('API Client - Sending update request with data:', JSON.stringify(data, null, 2));
     return this.request<any>(`/admin/services/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -673,6 +678,76 @@ class ApiClient {
   // Health check
   async healthCheck() {
     return this.request('/health');
+  }
+
+  // Notification endpoints
+  async getNotifications(options?: { unreadOnly?: boolean; limit?: number }) {
+    const params = new URLSearchParams();
+    if (options?.unreadOnly) params.append('unreadOnly', 'true');
+    if (options?.limit) params.append('limit', options.limit.toString());
+    return this.request<any[]>(`/notifications${params.toString() ? `?${params.toString()}` : ''}`);
+  }
+
+  async getUnreadNotificationCount() {
+    return this.request<{ count: number }>('/notifications/unread/count');
+  }
+
+  async markNotificationAsRead(notificationId: string) {
+    return this.request(`/notifications/${notificationId}/read`, {
+      method: 'PUT'
+    });
+  }
+
+  async markAllNotificationsAsRead() {
+    return this.request('/notifications/read-all', {
+      method: 'PUT'
+    });
+  }
+
+  async deleteNotification(notificationId: string) {
+    return this.request(`/notifications/${notificationId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Schedule request endpoints
+  async createScheduleRequest(data: {
+    serviceId: string;
+    startDate: string;
+    endDate: string;
+    message?: string;
+  }) {
+    return this.request('/schedule-requests', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getServiceScheduleRequests(serviceId: string, status?: string) {
+    const params = status ? `?status=${status}` : '';
+    return this.request<any[]>(`/schedule-requests/service/${serviceId}${params}`);
+  }
+
+  async getUserScheduleRequests(status?: string) {
+    const params = status ? `?status=${status}` : '';
+    return this.request<any[]>(`/schedule-requests/user${params}`);
+  }
+
+  async acceptScheduleRequest(requestId: string) {
+    return this.request(`/schedule-requests/${requestId}/accept`, {
+      method: 'PUT'
+    });
+  }
+
+  async rejectScheduleRequest(requestId: string, reason?: string) {
+    return this.request(`/schedule-requests/${requestId}/reject`, {
+      method: 'PUT',
+      body: JSON.stringify({ reason })
+    });
+  }
+
+  async checkAcceptedRequest(serviceId: string) {
+    return this.request<{ hasAccepted: boolean }>(`/schedule-requests/check/${serviceId}`);
   }
 }
 

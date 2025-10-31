@@ -39,6 +39,8 @@ model User {
   bookings                 Booking[]
   reviews                  Review[]
   services                 Service[]
+  scheduleRequests         ScheduleRequest[] @relation("ScheduleRequestUser")
+  notifications            Notification[]
 
   @@map("users")
 }
@@ -82,6 +84,7 @@ model Service {
   reviews      Review[]
   images       ServiceImage[]
   subBadges    ServiceSubBadge[]
+  scheduleRequests ScheduleRequest[] @relation("ScheduleRequestService")
   category     Category       @relation(fields: [categoryId], references: [id])
   units        units          @relation(fields: [unit_id], references: [id])
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -254,4 +257,52 @@ enum BookingStatus {
   CONFIRMED
   CANCELLED
   COMPLETED
+}
+
+enum ScheduleRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum NotificationType {
+  SCHEDULE_REQUEST
+  SCHEDULE_ACCEPTED
+  SCHEDULE_REJECTED
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  GENERAL
+}
+
+model ScheduleRequest {
+  id            String                @id @default(uuid())
+  serviceId     String                 @map("service_id")
+  userId        String                 @map("user_id")
+  startDate     DateTime               @db.Date @map("start_date")
+  endDate       DateTime               @db.Date @map("end_date")
+  status        ScheduleRequestStatus  @default(PENDING)
+  message       String?
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
+  respondedAt  DateTime?              @map("responded_at")
+  service       Service                @relation("ScheduleRequestService", fields: [serviceId], references: [id], onDelete: Cascade)
+  user          User                   @relation("ScheduleRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("schedule_requests")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  message   String
+  relatedId String?          @map("related_id") // ID of related entity (schedule request, booking, etc.)
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }

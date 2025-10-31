@@ -56,6 +56,12 @@ interface Service {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  subBadges?: Array<{
+    id: string;
+    name: string;
+    iconUrl?: string;
+    sortOrder: number;
+  }>;
 }
 
  
@@ -333,9 +339,8 @@ export default function AdminServicesPage() {
         payload.schedule = { startDate: new Date(startDate).toISOString(), endDate: new Date(endDate).toISOString() };
       }
 
-      if (subBadges.length > 0) {
-        payload.subBadges = subBadges.filter(b => b.name.trim() !== '');
-      }
+      // Always include subBadges array, even if empty
+      payload.subBadges = subBadges.filter(b => b.name.trim() !== '');
 
       const resp = await apiClient.createAdminService(payload);
       if ((resp as any).success && (resp as any).data) {
@@ -406,11 +411,9 @@ export default function AdminServicesPage() {
         payload.schedule = { startDate: new Date(editStartDate).toISOString(), endDate: new Date(editEndDate).toISOString() };
       }
 
-      if (editSubBadges.length > 0) {
-        payload.subBadges = editSubBadges.filter(b => b.name.trim() !== '');
-      } else {
-        payload.subBadges = [];
-      }
+      // Always include subBadges array, even if empty
+      payload.subBadges = editSubBadges.filter(b => b.name.trim() !== '');
+      console.log('Updating service with subBadges:', payload.subBadges);
 
       const resp = await apiClient.updateAdminService(selectedService.id, payload);
       if (!(resp as any).success) {
@@ -437,20 +440,6 @@ export default function AdminServicesPage() {
       }
 
       await loadServices();
-      
-      // Reload service details to get updated sub-badges
-      if (selectedService?.id) {
-        try {
-          const resp = await apiClient.getAdminServiceDetails(selectedService.id);
-          if ((resp as any).success && (resp as any).data) {
-            const serviceData = (resp as any).data;
-            const subBadgesData = (serviceData.subBadges || []).map((badge: any) => ({ name: badge.name, iconUrl: badge.iconUrl || '' }));
-            setEditSubBadges(subBadgesData);
-          }
-        } catch (e) {
-          console.error('Error reloading service details', e);
-        }
-      }
       
       toast.success('Servicio actualizado exitosamente');
       setIsEditDialogOpen(false);
@@ -571,6 +560,8 @@ export default function AdminServicesPage() {
       const resp = await apiClient.getAdminServiceDetails(service.id);
       if ((resp as any).success && (resp as any).data) {
         const s = (resp as any).data;
+        console.log('Service details loaded for edit:', s);
+        console.log('SubBadges from API:', s.subBadges);
         setFormData(prev => ({
           ...prev,
           title: s.title,
@@ -593,6 +584,7 @@ export default function AdminServicesPage() {
         const ex = (s.images || []).map((img: any) => ({ id: img.id, imageUrl: img.imageUrl }));
         setEditExistingImages(ex);
         const subBadgesData = (s.subBadges || []).map((badge: any) => ({ name: badge.name, iconUrl: badge.iconUrl || '' }));
+        console.log('Setting editSubBadges to:', subBadgesData);
         setEditSubBadges(subBadgesData);
         if (Array.isArray(s.availability) && s.availability.length > 0) {
           const dates = s.availability.map((a: any) => new Date(a.date));
@@ -1286,11 +1278,9 @@ export default function AdminServicesPage() {
                       <SelectValue placeholder="Seleccionar categoría" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Cosecha">Cosecha</SelectItem>
-                      <SelectItem value="Siembra">Siembra</SelectItem>
-                      <SelectItem value="Fertilización">Fertilización</SelectItem>
-                      <SelectItem value="Riego">Riego</SelectItem>
-                      <SelectItem value="Pulverización">Pulverización</SelectItem>
+                      {categories.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

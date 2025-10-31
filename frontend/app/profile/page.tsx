@@ -10,12 +10,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { User, Mail, Phone, MapPin, Calendar, Edit, Save, X, Camera } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Edit, Save, X, Camera, Bell } from 'lucide-react';
 import { DynamicNavigation } from '@/components/DynamicNavigation';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { apiClient } from '@/lib/api';
 import { getImageUrl } from '@/lib/utils';
 import { UploadResult } from '@/lib/fileUpload';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Check } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 interface UserProfile {
   id: string;
@@ -36,11 +40,24 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
+  const searchParams = useSearchParams();
+  const activeTabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<'profile' | 'notifications'>(
+    (activeTabParam === 'notifications' ? 'notifications' : 'profile') as 'profile' | 'notifications'
+  );
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'notifications') {
+      loadNotifications();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (user) {
@@ -183,6 +200,54 @@ export default function ProfilePage() {
     toast.success('Avatar eliminado');
   };
 
+  const loadNotifications = async () => {
+    try {
+      setNotificationsLoading(true);
+      const resp = await apiClient.getNotifications({ limit: 100 });
+      if (resp.success && resp.data) {
+        setNotifications(resp.data);
+      }
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      toast.error('Error al cargar notificaciones');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await apiClient.markNotificationAsRead(notificationId);
+      setNotifications(prev =>
+        prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n))
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await apiClient.markAllNotificationsAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      toast.success('Todas las notificaciones marcadas como leídas');
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      toast.error('Error al marcar notificaciones');
+    }
+  };
+
+  const handleDeleteNotification = async (notificationId: string) => {
+    try {
+      await apiClient.deleteNotification(notificationId);
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      toast.success('Notificación eliminada');
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      toast.error('Error al eliminar notificación');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -223,6 +288,24 @@ export default function ProfilePage() {
           <p className="text-gray-600 mt-2">Gestiona tu información personal y preferencias</p>
         </div>
 
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'profile' | 'notifications')} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Perfil
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2">
+              <Bell className="w-4 h-4" />
+              Notificaciones
+              {notifications.filter(n => !n.isRead).length > 0 && (
+                <Badge variant="destructive" className="ml-1">
+                  {notifications.filter(n => !n.isRead).length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profile Card */}
           <div className="lg:col-span-1">
@@ -508,6 +591,97 @@ export default function ProfilePage() {
             </Card>
           </div>
         </div>
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Notificaciones</CardTitle>
+                {notifications.filter(n => !n.isRead).length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMarkAllAsRead}
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Marcar todas como leídas
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                {notificationsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-verdeprimario-100 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Cargando notificaciones...</p>
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Bell className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p>No hay notificaciones</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {notifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`border rounded-lg p-4 hover:bg-gray-50 transition-colors ${
+                          !notification.isRead ? 'bg-blue-50 border-blue-200' : ''
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-gray-900">
+                                {notification.title}
+                              </h3>
+                              {!notification.isRead && (
+                                <Badge variant="default" className="bg-blue-500">
+                                  Nuevo
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mb-2">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {new Date(notification.createdAt).toLocaleDateString("es-UY", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            {!notification.isRead && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleMarkAsRead(notification.id)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Check className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteNotification(notification.id)}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
         </div>
       </div>
       <Toaster position="top-right" />

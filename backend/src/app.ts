@@ -20,6 +20,8 @@ import oauthRoutes from './routes/oauth.routes';
 import fileRoutes from './routes/file.routes';
 import searchRoutes from './routes/search.routes';
 import mapsRoutes from './routes/maps.routes';
+import notificationRoutes from './routes/notification.routes';
+import scheduleRequestRoutes from './routes/schedule-request.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -144,6 +146,8 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/files', fileRoutes);
 app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/maps', mapsRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/schedule-requests', scheduleRequestRoutes);
 
 // Root endpoint
 app.get('/', (_req, res) => {

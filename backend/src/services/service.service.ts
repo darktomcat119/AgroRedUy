@@ -137,6 +137,9 @@ export class ServiceService {
           images: {
             orderBy: { sortOrder: 'asc' }
           },
+          subBadges: {
+            orderBy: { sortOrder: 'asc' }
+          },
           reviews: {
             include: {
               user: {
@@ -336,7 +339,8 @@ export class ServiceService {
               id: true,
               firstName: true,
               lastName: true,
-              profileImageUrl: true
+              profileImageUrl: true,
+              phone: true
             }
           },
           category: true,

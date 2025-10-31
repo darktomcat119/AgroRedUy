@@ -859,6 +859,11 @@ export class AdminController {
     try {
       const { id } = req.params;
       const updateData = req.body;
+      console.log('=== Update Service Request ===');
+      console.log('Service ID:', id);
+      console.log('Request body keys:', Object.keys(req.body));
+      console.log('subBadges in req.body:', (req.body as any).subBadges);
+      console.log('Full req.body:', JSON.stringify(req.body, null, 2));
       const schedule = (req.body as any).schedule as { startDate?: string; endDate?: string; startTime?: string; endTime?: string } | undefined;
 
       // Validate foreign keys if present
@@ -876,6 +881,11 @@ export class AdminController {
           return;
         }
       }
+
+      // IMPORTANT: Extract subBadges from req.body BEFORE modifying updateData
+      // because updateData is a reference to req.body, and we'll delete subBadges from it
+      const subBadges = (req.body as any).subBadges;
+      console.log('Sub-badges extracted from req.body BEFORE deletion:', JSON.stringify(subBadges));
 
       // Build a safe Prisma update payload
       const prismaData: any = {};
@@ -920,25 +930,31 @@ export class AdminController {
       });
 
       // Handle sub-badges update: delete existing and create new ones
-      const subBadges = (req.body as any).subBadges;
+      console.log('Sub-badges received in update (after extraction):', JSON.stringify(subBadges));
       if (Array.isArray(subBadges)) {
         // Delete existing sub-badges
         await prisma.serviceSubBadge.deleteMany({ where: { serviceId: id } });
+        console.log(`Deleted existing sub-badges for service ${id}`);
         
         // Create new sub-badges
         if (subBadges.length > 0) {
           let sortOrder = 0;
           for (const badge of subBadges) {
-            await prisma.serviceSubBadge.create({
-              data: {
-                serviceId: id,
-                name: String(badge.name),
-                iconUrl: badge.iconUrl ? String(badge.iconUrl) : null,
-                sortOrder: sortOrder++
-              }
-            });
+            if (badge.name && badge.name.trim()) {
+              const created = await prisma.serviceSubBadge.create({
+                data: {
+                  serviceId: id,
+                  name: String(badge.name).trim(),
+                  iconUrl: badge.iconUrl ? String(badge.iconUrl).trim() : null,
+                  sortOrder: sortOrder++
+                }
+              });
+              console.log(`Created sub-badge: ${created.id} - ${created.name}`);
+            }
           }
         }
+      } else {
+        console.warn('Sub-badges is not an array:', typeof subBadges, subBadges);
       }
 
       // If schedule provided, reset availability for this service to the new range (full-day if times omitted)
@@ -1000,6 +1016,8 @@ export class AdminController {
           }
         }
       });
+
+      console.log('Updated service with subBadges:', JSON.stringify(updatedService?.subBadges));
 
       res.json({
         success: true,
@@ -1186,14 +1204,16 @@ export class AdminController {
       if (Array.isArray(subBadges) && subBadges.length > 0) {
         let sortOrder = 0;
         for (const badge of subBadges) {
-          await prisma.serviceSubBadge.create({
-            data: {
-              serviceId: created.id,
-              name: String(badge.name),
-              iconUrl: badge.iconUrl ? String(badge.iconUrl) : null,
-              sortOrder: sortOrder++
-            }
-          });
+          if (badge.name && badge.name.trim()) {
+            await prisma.serviceSubBadge.create({
+              data: {
+                serviceId: created.id,
+                name: String(badge.name).trim(),
+                iconUrl: badge.iconUrl ? String(badge.iconUrl).trim() : null,
+                sortOrder: sortOrder++
+              }
+            });
+          }
         }
       }
 
@@ -1222,6 +1242,7 @@ export class AdminController {
           user: { select: { id: true, firstName: true, lastName: true, profileImageUrl: true } },
           category: true,
           images: { orderBy: { sortOrder: 'asc' } },
+          subBadges: { orderBy: { sortOrder: 'asc' } },
           reviews: {
             include: { user: { select: { firstName: true, lastName: true } } },
             orderBy: { createdAt: 'desc' }

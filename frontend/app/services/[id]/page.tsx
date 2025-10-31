@@ -12,6 +12,8 @@ import { CalendarSection } from "@/components/sections/CalendarSection";
 import { Button } from "@/components/ui/button";
 import { ServiceMap } from "@/components/maps/ServiceMap";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { ScheduleRequestDialog } from "@/components/ScheduleRequestDialog";
 
 export default function ServiceDetailsPage(): JSX.Element {
   const params = useParams();
@@ -20,6 +22,11 @@ export default function ServiceDetailsPage(): JSX.Element {
 
   const [loading, setLoading] = useState(true);
   const [service, setService] = useState<any | null>(null);
+  const [hasAcceptedRequest, setHasAcceptedRequest] = useState(false);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     let active = true;
@@ -28,14 +35,27 @@ export default function ServiceDetailsPage(): JSX.Element {
       setLoading(true);
       const resp = await apiClient.getService(id);
       if (!active) return;
-      if (resp.success && resp.data) setService(resp.data);
+      if (resp.success && resp.data) {
+        setService(resp.data);
+        // Check if user has accepted schedule request
+        if (isAuthenticated) {
+          try {
+            const checkResp = await apiClient.checkAcceptedRequest(id);
+            if (checkResp.success && checkResp.data?.hasAccepted) {
+              setHasAcceptedRequest(true);
+            }
+          } catch (error) {
+            console.error("Error checking accepted request:", error);
+          }
+        }
+      }
       setLoading(false);
     };
     load();
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, isAuthenticated]);
 
   const navigationItems = [
     { label: "Inicio", href: "/" },
@@ -46,7 +66,8 @@ export default function ServiceDetailsPage(): JSX.Element {
   const contractorName = service ? `${service.user?.firstName || ""} ${service.user?.lastName || ""}`.trim() : undefined;
   const priceUnit = (service as any)?.priceCurrency || (service as any)?.currency || "UYU";
   const priceLabel = service ? `${priceUnit} ${Math.round((service as any).price || (service as any).pricePerHour || 0)}/hora` : undefined;
-  const contact = service?.user?.email || undefined;
+  // Only show phone if user is authenticated AND has accepted schedule request
+  const contact = (isAuthenticated && hasAcceptedRequest) ? (service?.user?.phone || undefined) : undefined;
   const description = service?.description || undefined;
   const zone = service ? `${service.department || ""}${service.city && service.department ? ", " : ""}${service.city || ""}`.trim() : undefined;
   const radius = service?.radius ? `Radio de ${service.radius} KM` : undefined;
@@ -77,13 +98,32 @@ export default function ServiceDetailsPage(): JSX.Element {
                 subBadges={(service as any)?.subBadges || []} 
               />
               <ServiceDetailsCard contractorName={contractorName} priceLabel={priceLabel} contact={contact} description={description} />
-              <div className="mt-6">{(ImageGallerySection as any)({ images: galleryImages })}</div>
+              {galleryImages.length > 0 && (
+                <div className="mt-6">
+                  <ImageGallerySection images={galleryImages} />
+                </div>
+              )}
               <div className="mt-6"><LocationBadgesSection zone={zone} radius={radius} /></div>
             </div>
             <div className="w-[300px] flex-shrink-0 flex flex-col items-center">
-              <CalendarSection availableDates={(service?.availability || []).map((a: any) => a.date)} />
-              <Button className="w-[213px] h-[35px] bg-naranja-100 hover:bg-naranja-100/90 rounded-[50px] mt-4 h-auto px-[37px] py-2">
-                <span className="font-raleway-bold-16pt text-blanco-100">Ver disponibilidad</span>
+              <CalendarSection 
+                availableDates={(service?.availability || []).map((a: any) => a.date)}
+                onDateRangeChange={(startDate, endDate) => {
+                  setSelectedStartDate(startDate);
+                  setSelectedEndDate(endDate);
+                }}
+              />
+              <Button 
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    router.push('/login');
+                  } else {
+                    setIsScheduleDialogOpen(true);
+                  }
+                }}
+                className="w-[213px] h-[35px] bg-naranja-100 hover:bg-naranja-100/90 rounded-[50px] mt-4 h-auto px-[37px] py-2"
+              >
+                <span className="font-raleway-bold-16pt text-blanco-100">Schedule Request</span>
               </Button>
             </div>
           </div>
@@ -100,6 +140,24 @@ export default function ServiceDetailsPage(): JSX.Element {
           </div>
         </div>
       </main>
+
+      {service && (
+        <ScheduleRequestDialog
+          open={isScheduleDialogOpen}
+          onOpenChange={setIsScheduleDialogOpen}
+          serviceId={service.id}
+          serviceTitle={service.title}
+          startDate={selectedStartDate}
+          endDate={selectedEndDate}
+          onSuccess={() => {
+            // Clear selected dates after successful submission
+            setSelectedStartDate(null);
+            setSelectedEndDate(null);
+            // Refresh to check for accepted request (after admin accepts)
+            // Note: This will be updated when admin accepts the request
+          }}
+        />
+      )}
     </div>
   );
 }

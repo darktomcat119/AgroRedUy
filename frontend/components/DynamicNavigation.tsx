@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useRouter, usePathname } from "next/navigation";
 import { getImageUrl } from "@/lib/utils";
+import { NotificationDropdown } from "@/components/NotificationDropdown";
 
 export interface NavigationItem {
   label: string;
@@ -205,7 +206,7 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
         {rightItems.map((item, index) => (
           <NavButton key={index} item={item} />
         ))}
-        
+
         {/* User Menu */}
         {isAuthenticated && (
           <div className="relative" ref={userMenuRef}>
@@ -312,6 +313,13 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
           </div>
         )}
       </div>
+
+      {/* Notification Dropdown - Outside navbar, to the right of user dropdown */}
+      {isAuthenticated && (
+        <div className="hidden lg:block">
+          <NotificationDropdown />
+        </div>
+      )}
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (

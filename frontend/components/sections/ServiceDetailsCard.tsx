@@ -16,7 +16,7 @@ export const ServiceDetailsCard = ({
   const serviceDetails = {
     name: contractorName ?? "Ricardo Mollo",
     price: priceLabel ?? "USD 200",
-    contact: contact ?? "099 123 456",
+    contact: contact, // Don't use fallback - only show if provided
     description: description ?? "Hace más de 20 años que trabajamos con un equipo responsable para que tu cosecha no sea un problema"
   };
   return (
@@ -35,11 +35,13 @@ export const ServiceDetailsCard = ({
           <span className="text-sm font-medium text-gray-800">{serviceDetails.price}</span>
         </div>
         
-        {/* Contacto */}
-        <div className="flex items-center border-b border-gray-300 py-3">
-          <span className="text-sm font-bold text-gray-800 mr-4">Contacto:</span>
-          <span className="text-sm font-medium text-gray-800">{serviceDetails.contact}</span>
-        </div>
+        {/* Contacto - Only show if contact is provided */}
+        {serviceDetails.contact && (
+          <div className="flex items-center border-b border-gray-300 py-3">
+            <span className="text-sm font-bold text-gray-800 mr-4">Contacto:</span>
+            <span className="text-sm font-medium text-gray-800">{serviceDetails.contact}</span>
+          </div>
+        )}
         
         {/* Descripción */}
         <div className="flex items-start py-3">

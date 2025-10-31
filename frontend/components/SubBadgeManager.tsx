@@ -43,6 +43,7 @@ export const SubBadgeManager = ({ badges, onChange }: SubBadgeManagerProps): JSX
   };
 
   React.useEffect(() => {
+    console.log('SubBadgeManager received badges prop:', badges);
     setLocalBadges(badges || []);
   }, [badges]);
 

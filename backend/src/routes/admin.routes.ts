@@ -186,7 +186,11 @@ router.put('/services/:id',
     body('address').optional().isString().trim().isLength({ min: 3, max: 200 }).withMessage('Address must be 3-200 characters'),
     body('city').optional().isString().trim().isLength({ min: 2, max: 100 }).withMessage('City must be 2-100 characters'),
     body('department').optional().isString().trim().isLength({ min: 2, max: 100 }).withMessage('Department must be 2-100 characters'),
-    body('isActive').optional().isBoolean().withMessage('isActive must be boolean')
+    body('isActive').optional().isBoolean().withMessage('isActive must be boolean'),
+    body('subBadges').optional().isArray().withMessage('subBadges must be an array'),
+    body('subBadges.*.name').optional().isString().trim().withMessage('Sub-badge name must be a string'),
+    body('subBadges.*.iconUrl').optional().isString().withMessage('Sub-badge iconUrl must be a string'),
+    body('radius').optional().isInt({ min: 0 }).withMessage('radius must be a non-negative integer')
   ],
   validateRequest,
   adminController.updateService

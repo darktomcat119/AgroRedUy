@@ -44,7 +44,12 @@ function buildMonthGrid(currentMonth: Date) {
   return cells;
 }
 
-export const CalendarSection = ({ availableDates }: { availableDates?: string[] }): JSX.Element => {
+interface CalendarSectionProps {
+  availableDates?: string[];
+  onDateRangeChange?: (startDate: Date | null, endDate: Date | null) => void;
+}
+
+export const CalendarSection = ({ availableDates, onDateRangeChange }: CalendarSectionProps): JSX.Element => {
   const today = useMemo(() => new Date(), []);
   const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(today));
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -65,18 +70,27 @@ export const CalendarSection = ({ availableDates }: { availableDates?: string[] 
 
   const onDayClick = (d: Date) => {
     if (!isAvailable(d)) return;
+    let newStartDate: Date | null = startDate;
+    let newEndDate: Date | null = endDate;
+    
     if (!startDate || (startDate && endDate)) {
-      setStartDate(d);
-      setEndDate(null);
-      return;
-    }
-    if (startDate && !endDate) {
+      newStartDate = d;
+      newEndDate = null;
+    } else if (startDate && !endDate) {
       if (d < startDate) {
-        setEndDate(startDate);
-        setStartDate(d);
+        newEndDate = startDate;
+        newStartDate = d;
       } else {
-        setEndDate(d);
+        newEndDate = d;
       }
+    }
+    
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+    
+    // Notify parent component of date range change
+    if (onDateRangeChange) {
+      onDateRangeChange(newStartDate, newEndDate);
     }
   };
 

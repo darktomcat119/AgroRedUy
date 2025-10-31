@@ -1,43 +1,45 @@
 "use client";
 
 import React, { useState } from "react";
+import { getImageUrl } from "@/lib/utils";
 
-const galleryImages = [
-  "/figmaAssets/atomo-foto-1.png",
-  "/figmaAssets/atomo-foto-2.png", 
-  "/figmaAssets/atomo-foto-3.png",
-  "/figmaAssets/atomo-foto-4.png",
-  "/figmaAssets/atomo-foto-5.png",
-];
+interface ImageGallerySectionProps {
+  images?: string[];
+}
 
-export const ImageGallerySection = (): JSX.Element => {
+export const ImageGallerySection = ({ images = [] }: ImageGallerySectionProps): JSX.Element => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const imagesPerView = 3;
 
+  // Use provided images or show nothing if empty
+  if (!images || images.length === 0) {
+    return <div></div>;
+  }
+
   const goToPrevious = () => {
     setCurrentIndex((prevIndex) => 
-      prevIndex > 0 ? prevIndex - 1 : Math.max(0, galleryImages.length - imagesPerView)
+      prevIndex > 0 ? prevIndex - 1 : Math.max(0, images.length - imagesPerView)
     );
   };
 
   const goToNext = () => {
     setCurrentIndex((prevIndex) => 
-      prevIndex < galleryImages.length - imagesPerView ? prevIndex + 1 : 0
+      prevIndex < images.length - imagesPerView ? prevIndex + 1 : 0
     );
   };
 
-  const visibleImages = galleryImages.slice(currentIndex, currentIndex + imagesPerView);
+  const visibleImages = images.slice(currentIndex, currentIndex + imagesPerView);
 
   return (
     <div className="flex items-center justify-start gap-4">
       {/* Previous Arrow */}
       <button 
         onClick={goToPrevious}
-        className="flex items-center justify-center w-[25px] h-[25px] hover:opacity-80 transition-opacity cursor-pointer"
-        disabled={currentIndex === 0}
+        className="flex items-center justify-center w-[25px] h-[25px] hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        disabled={currentIndex === 0 || images.length <= imagesPerView}
       >
         <img
-          className={`w-[25px] h-[25px] ${currentIndex === 0 ? 'opacity-40' : 'opacity-60'}`}
+          className="w-[25px] h-[25px] opacity-60"
           alt="Previous"
           src="/figmaAssets/molecula-icono-flecha-calendario-servicios.svg"
         />
@@ -53,7 +55,11 @@ export const ImageGallerySection = (): JSX.Element => {
             <img
               className="w-full h-full object-cover"
               alt={`Gallery image ${currentIndex + index + 1}`}
-              src={src}
+              src={getImageUrl(src)}
+              onError={(e) => {
+                // Hide broken images
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
             />
           </div>
         ))}
@@ -62,11 +68,11 @@ export const ImageGallerySection = (): JSX.Element => {
       {/* Next Arrow */}
       <button 
         onClick={goToNext}
-        className="flex items-center justify-center w-[25px] h-[25px] hover:opacity-80 transition-opacity cursor-pointer"
-        disabled={currentIndex >= galleryImages.length - imagesPerView}
+        className="flex items-center justify-center w-[25px] h-[25px] hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        disabled={currentIndex >= images.length - imagesPerView || images.length <= imagesPerView}
       >
         <img
-          className={`w-[25px] h-[25px] ${currentIndex >= galleryImages.length - imagesPerView ? 'opacity-40' : 'opacity-60'}`}
+          className="w-[25px] h-[25px] opacity-60"
           alt="Next"
           src="/figmaAssets/molecula-icono-flecha-calendario-servicios-1.svg"
         />

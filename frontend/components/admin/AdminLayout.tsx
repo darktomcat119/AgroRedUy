@@ -16,7 +16,8 @@ import {
   Building2,
   Crown,
   UserCheck,
-  Database
+  Database,
+  Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
@@ -49,6 +50,13 @@ const superAdminNavItems = [
     href: '/admin/services',
     icon: Building2,
     description: 'Gestión de servicios',
+    superAdminOnly: false
+  },
+  {
+    label: 'Solicitudes de Horario',
+    href: '/admin/schedule-requests',
+    icon: Calendar,
+    description: 'Gestionar solicitudes',
     superAdminOnly: false
   },
   {
@@ -87,6 +95,12 @@ const adminNavItems = [
     href: '/admin/services',
     icon: Building2,
     description: 'Gestionar mis servicios'
+  },
+  {
+    label: 'Solicitudes de Horario',
+    href: '/admin/schedule-requests',
+    icon: Calendar,
+    description: 'Gestionar solicitudes'
   }
 ];
 
