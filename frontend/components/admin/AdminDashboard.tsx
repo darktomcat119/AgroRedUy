@@ -105,7 +105,7 @@ export function AdminDashboard() {
   useEffect(() => {
     // Only load analytics if user is authenticated and has admin role
     if (isAuthenticated && user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN')) {
-      loadAnalytics();
+    loadAnalytics();
     } else {
       setIsLoading(false);
     }
@@ -323,22 +323,22 @@ export function AdminDashboard() {
                 <p className="text-grisprimario-200 font-raleway-medium-16pt">No hay categorías disponibles</p>
               </div>
             ) : (
-              <div className="space-y-4">
+            <div className="space-y-4">
                 {(analytics.topCategories || []).map((category, index) => (
                   <div key={`category-${index}`} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="w-6 h-6 flex items-center justify-center text-xs">
-                        {index + 1}
-                      </Badge>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className="w-6 h-6 flex items-center justify-center text-xs">
+                      {index + 1}
+                    </Badge>
                       <span className="font-medium text-negro-100 font-raleway-bold-16pt">{category.categoryName}</span>
-                    </div>
-                    <div className="text-right">
+                  </div>
+                  <div className="text-right">
                       <p className="text-sm font-semibold text-negro-100 font-raleway-bold-16pt">{category.serviceCount}</p>
                       <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">servicios</p>
-                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
+            </div>
             )}
           </CardContent>
         </Card>
@@ -360,25 +360,25 @@ export function AdminDashboard() {
                 <p className="text-grisprimario-200 font-raleway-medium-16pt">No hay servicios disponibles</p>
               </div>
             ) : (
-              <div className="space-y-4">
+            <div className="space-y-4">
                 {(analytics.topServices || []).map((service, index) => (
                   <div key={`service-${index}`} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="w-6 h-6 flex items-center justify-center text-xs">
-                        {index + 1}
-                      </Badge>
-                      <div>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className="w-6 h-6 flex items-center justify-center text-xs">
+                      {index + 1}
+                    </Badge>
+                    <div>
                         <p className="font-medium text-sm text-negro-100 font-raleway-bold-16pt">{service.serviceTitle}</p>
                         <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">{service.bookingCount} reservas</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-negro-100 font-raleway-bold-16pt">{formatCurrency(service.totalRevenue)}</p>
-                      <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">ingresos</p>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="text-right">
+                      <p className="text-sm font-semibold text-negro-100 font-raleway-bold-16pt">{formatCurrency(service.totalRevenue)}</p>
+                      <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">ingresos</p>
+                  </div>
+                </div>
+              ))}
+            </div>
             )}
           </CardContent>
         </Card>
@@ -398,7 +398,7 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             {(analytics.userGrowth || []).length === 0 ? (
-              <div className="text-center py-8">
+            <div className="text-center py-8">
                 <TrendingUp className="h-12 w-12 text-grisprimario-200 mx-auto mb-4" />
                 <p className="text-grisprimario-200 font-raleway-medium-16pt">No hay datos disponibles</p>
               </div>
@@ -438,8 +438,8 @@ export function AdminDashboard() {
                 <div className="text-center">
                   <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">
                     Últimos {(analytics.userGrowth || []).length} períodos
-                  </p>
-                </div>
+              </p>
+            </div>
               </div>
             )}
           </CardContent>
@@ -457,7 +457,7 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             {(analytics.serviceGrowth || []).length === 0 ? (
-              <div className="text-center py-8">
+            <div className="text-center py-8">
                 <Briefcase className="h-12 w-12 text-grisprimario-200 mx-auto mb-4" />
                 <p className="text-grisprimario-200 font-raleway-medium-16pt">No hay datos disponibles</p>
               </div>
@@ -497,8 +497,8 @@ export function AdminDashboard() {
                 <div className="text-center">
                   <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">
                     Últimos {(analytics.serviceGrowth || []).length} períodos
-                  </p>
-                </div>
+              </p>
+            </div>
               </div>
             )}
           </CardContent>
@@ -516,7 +516,7 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             {(analytics.bookingGrowth || []).length === 0 ? (
-              <div className="text-center py-8">
+            <div className="text-center py-8">
                 <Calendar className="h-12 w-12 text-grisprimario-200 mx-auto mb-4" />
                 <p className="text-grisprimario-200 font-raleway-medium-16pt">No hay datos disponibles</p>
               </div>
@@ -556,8 +556,8 @@ export function AdminDashboard() {
                 <div className="text-center">
                   <p className="text-xs text-grisprimario-200 font-raleway-medium-14pt">
                     Últimos {(analytics.bookingGrowth || []).length} períodos
-                  </p>
-                </div>
+              </p>
+            </div>
               </div>
             )}
           </CardContent>

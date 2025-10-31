@@ -51,8 +51,8 @@ router.post('/avatar', authenticateToken, async (req: Request, res: Response) =>
           profileImageUrl: result.url
         });
 
-        res.json({
-          success: true,
+  res.json({
+    success: true,
           message: 'Avatar uploaded successfully',
           data: {
             url: result.url,
@@ -77,8 +77,8 @@ router.post('/avatar', authenticateToken, async (req: Request, res: Response) =>
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      data: null
-    });
+    data: null
+  });
   }
 });
 
@@ -120,8 +120,8 @@ router.post('/category-icon', authenticateToken, async (req: Request, res: Respo
         return;
       }
 
-      res.json({
-        success: true,
+  res.json({
+    success: true,
         message: 'Category icon uploaded successfully',
         data: {
           url: result.url,
@@ -129,8 +129,8 @@ router.post('/category-icon', authenticateToken, async (req: Request, res: Respo
           size: result.size,
           mimetype: result.mimetype
         }
-      });
-    });
+  });
+});
   } catch (error) {
     logger.error('Error in category icon upload:', error);
     res.status(500).json({
@@ -313,8 +313,8 @@ router.post('/cleanup', authenticateToken, async (req: Request, res: Response) =
 
     await fileService.cleanupTempFiles();
 
-    res.json({
-      success: true,
+  res.json({
+    success: true,
       message: 'Temporary files cleaned up successfully',
       data: null
     });

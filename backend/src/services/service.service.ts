@@ -11,6 +11,7 @@ export interface CreateServiceData {
   latitude: number;
   longitude: number;
   mapZoom?: number;
+  radius?: number;
   address: string;
   city: string;
   department: string;
@@ -28,6 +29,7 @@ export interface UpdateServiceData {
   latitude?: number;
   longitude?: number;
   mapZoom?: number;
+  radius?: number;
   address?: string;
   city?: string;
   department?: string;
@@ -111,6 +113,7 @@ export class ServiceService {
         latitude: data.latitude,
         longitude: data.longitude,
         mapZoom: data.mapZoom ?? 6,
+        radius: data.radius,
         address: data.address,
         city: data.city,
         department: data.department,
@@ -286,6 +289,9 @@ export class ServiceService {
             images: {
               orderBy: { sortOrder: 'asc' }
             },
+            subBadges: {
+              orderBy: { sortOrder: 'asc' }
+            },
             reviews: {
               include: {
                 user: {
@@ -335,6 +341,9 @@ export class ServiceService {
           },
           category: true,
           images: {
+            orderBy: { sortOrder: 'asc' }
+          },
+          subBadges: {
             orderBy: { sortOrder: 'asc' }
           },
           availability: {

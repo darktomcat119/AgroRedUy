@@ -15,7 +15,8 @@ import {
   Home,
   Building2,
   Crown,
-  UserCheck
+  UserCheck,
+  Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
@@ -49,6 +50,13 @@ const superAdminNavItems = [
     icon: Building2,
     description: 'Gestión de servicios',
     superAdminOnly: false
+  },
+  {
+    label: 'Datos Base',
+    href: '/admin/categories',
+    icon: Database,
+    description: 'Categorías y sub-badges',
+    superAdminOnly: true
   },
   {
     label: 'Configuración',

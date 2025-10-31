@@ -170,9 +170,9 @@ export default function ServiciosListaPage(): JSX.Element {
                     {/* Title pill */}
                     <div className="w-full h-[35px] bg-verdeprimario-100 shadow-[0_6px_10px_rgba(0,0,0,0.25)] rounded-[50px] flex items-center justify-center mb-2">
                       <span className="font-raleway-bold-16pt text-blanco-100 text-[16px]">
-                        {service.title}
-                      </span>
-                    </div>
+                    {service.title}
+                  </span>
+                </div>
 
                     {/* Card */}
                     <Card className="w-[315px] h-[279px] bg-white rounded-[20px] border border-[#e6e6e6] shadow-[0_6px_12px_rgba(0,0,0,0.15)] overflow-hidden">
@@ -182,34 +182,34 @@ export default function ServiciosListaPage(): JSX.Element {
                           <div className="grid grid-cols-[120px_1fr] gap-2 items-start">
                             <div className="font-raleway-bold-14pt font-semibold text-negro-100 text-[13px] sm:text-[14px]">Cosechador:</div>
                             <div className="font-raleway-medium-14pt text-negro-100 text-[13px] sm:text-[14px]">{contractorName}</div>
-                          </div>
+                  </div>
                           <div className="h-px bg-[#e6e6e6]" />
                           {/* Row: Price */}
                           <div className="grid grid-cols-[120px_1fr] gap-2 items-start">
                             <div className="font-raleway-bold-14pt font-semibold text-negro-100 text-[13px] sm:text:[14px]">Precio por hora:</div>
                             <div className="font-raleway-medium-14pt text-negro-100 text-[13px] sm:text-[14px]">{price > 0 ? `${price} ${currency}` : '-'}</div>
-                          </div>
+                  </div>
                           <div className="h-px bg-[#e6e6e6]" />
                           {/* Row: Description */}
                           <div className="grid grid-cols-[120px_1fr] gap-2 items-start">
                             <div className="font-raleway-bold-14pt font-semibold text-negro-100 text-[13px] sm:text-[14px]">Descripción</div>
                             <div className="font-raleway-medium-14pt text-negro-100 leading-relaxed text-[13px] sm:text-[14px] break-words line-clamp-4">
                               {service.description}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+                </Card>
+                
                     {/* CTA */}
                     <Button
                       className="w-[240px] h-[35px] bg-naranja-100 shadow-[0px_6px_10px_rgba(0,0,0,0.25)] rounded-[50px] hover:bg-naranja-100/90 -mt-4 mx-auto"
                       onClick={() => router.push(`/services/${service.id}`)}
                     >
                       <span className="font-raleway-bold-16pt text-blanco-100 text-[16px]">
-                        Ver disponibilidad
-                      </span>
-                    </Button>
+                    Ver disponibilidad
+                  </span>
+                </Button>
                   </div>
                 );
               })}
@@ -220,7 +220,7 @@ export default function ServiciosListaPage(): JSX.Element {
               {!hasMore && services.length > 0 && (
                 <div className="text-center text-grisprimario-200 py-4">No hay más resultados</div>
               )}
-            </div>
+          </div>
           )}
         </div>
       </main>

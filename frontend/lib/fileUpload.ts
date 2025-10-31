@@ -129,8 +129,14 @@ export class FileUploadService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`${this.baseUrl}/api/v1/files/upload/category-icon`, {
+      // Get auth token from localStorage
+      const token = localStorage.getItem('authToken') || '';
+      
+      const response = await fetch(`${this.baseUrl}/api/v1/files/category-icon`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -139,7 +145,7 @@ export class FileUploadService {
       if (!response.ok) {
         return {
           success: false,
-          error: result.error || 'Upload failed'
+          error: result.message || result.error?.message || result.error || 'Upload failed'
         };
       }
 

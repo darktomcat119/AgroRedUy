@@ -259,16 +259,6 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
                       Mi Perfil
                     </Button>
                   </Link>
-                  
-                  <Link href="/settings" onClick={() => setIsUserMenuOpen(false)}>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
-                    >
-                      <Settings className="w-4 h-4 mr-3" />
-                      Configuración
-                    </Button>
-                  </Link>
 
                   {user?.role === 'CONTRACTOR' && (
                     <Link href="/my-services" onClick={() => setIsUserMenuOpen(false)}>
@@ -378,16 +368,6 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
                   >
                     <User className="w-4 h-4 mr-3" />
                     Mi Perfil
-                  </Button>
-                </Link>
-                
-                <Link href="/settings" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-white"
-                  >
-                    <Settings className="w-4 h-4 mr-3" />
-                    Configuración
                   </Button>
                 </Link>
 

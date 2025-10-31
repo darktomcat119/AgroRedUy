@@ -19,8 +19,10 @@ import { Switch } from '@/components/ui/switch';
 import { apiClient } from '@/lib/api';
 import { fileUploadService } from '@/lib/fileUpload';
 import { MultiImageDropzone } from '@/components/MultiImageDropzone';
+import { SubBadgeManager } from '@/components/SubBadgeManager';
 import { ServiceMap } from '@/components/maps/ServiceMap';
 import { ConfirmDialog, ConfirmDialogs } from '@/components/ui/confirm-dialog';
+import { AdminDateRangePicker } from '@/components/admin/AdminDateRangePicker';
 import toast from 'react-hot-toast';
 
 interface Service {
@@ -40,6 +42,7 @@ interface Service {
   latitude: number;
   longitude: number;
   mapZoom?: number;
+  radius?: number;
   address: string;
   city: string;
   department: string;
@@ -109,12 +112,15 @@ export default function AdminServicesPage() {
     latitude: 0,
     longitude: 0,
     mapZoom: 6,
+    radius: 0,
     isActive: true
   });
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [subBadges, setSubBadges] = useState<Array<{ name: string; iconUrl?: string }>>([]);
+  const [editSubBadges, setEditSubBadges] = useState<Array<{ name: string; iconUrl?: string }>>([]);
   const [units, setUnits] = useState<Array<{ id: string; name: string; symbol: string }>>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [mapZoom, setMapZoom] = useState<number>(formData.mapZoom);
@@ -315,6 +321,7 @@ export default function AdminServicesPage() {
         latitude: Number(formData.latitude),
         longitude: Number(formData.longitude),
         mapZoom: Number(formData.mapZoom) || 6,
+        radius: formData.radius || undefined,
         address: formData.address,
         city: formData.city,
         department: formData.department,
@@ -324,6 +331,10 @@ export default function AdminServicesPage() {
 
       if (startDate && endDate) {
         payload.schedule = { startDate: new Date(startDate).toISOString(), endDate: new Date(endDate).toISOString() };
+      }
+
+      if (subBadges.length > 0) {
+        payload.subBadges = subBadges.filter(b => b.name.trim() !== '');
       }
 
       const resp = await apiClient.createAdminService(payload);
@@ -382,6 +393,7 @@ export default function AdminServicesPage() {
         latitude: Number(formData.latitude),
         longitude: Number(formData.longitude),
         mapZoom: Number(formData.mapZoom) || 6,
+        radius: formData.radius || undefined,
         address: formData.address,
         city: formData.city,
         department: formData.department,
@@ -392,6 +404,12 @@ export default function AdminServicesPage() {
 
       if (editStartDate && editEndDate) {
         payload.schedule = { startDate: new Date(editStartDate).toISOString(), endDate: new Date(editEndDate).toISOString() };
+      }
+
+      if (editSubBadges.length > 0) {
+        payload.subBadges = editSubBadges.filter(b => b.name.trim() !== '');
+      } else {
+        payload.subBadges = [];
       }
 
       const resp = await apiClient.updateAdminService(selectedService.id, payload);
@@ -419,6 +437,21 @@ export default function AdminServicesPage() {
       }
 
       await loadServices();
+      
+      // Reload service details to get updated sub-badges
+      if (selectedService?.id) {
+        try {
+          const resp = await apiClient.getAdminServiceDetails(selectedService.id);
+          if ((resp as any).success && (resp as any).data) {
+            const serviceData = (resp as any).data;
+            const subBadgesData = (serviceData.subBadges || []).map((badge: any) => ({ name: badge.name, iconUrl: badge.iconUrl || '' }));
+            setEditSubBadges(subBadgesData);
+          }
+        } catch (e) {
+          console.error('Error reloading service details', e);
+        }
+      }
+      
       toast.success('Servicio actualizado exitosamente');
       setIsEditDialogOpen(false);
       setSelectedService(null);
@@ -521,12 +554,15 @@ export default function AdminServicesPage() {
       latitude: 0,
       longitude: 0,
       mapZoom: 6,
+      radius: 0,
       isActive: true
     });
     setStartDate('');
     setEndDate('');
     setImageFiles([]);
     setImagePreviews([]);
+    setSubBadges([]);
+    setEditSubBadges([]);
   };
 
   const openEditDialog = async (service: Service) => {
@@ -551,10 +587,13 @@ export default function AdminServicesPage() {
           latitude: Number(s.latitude),
           longitude: Number(s.longitude),
           mapZoom: typeof s.mapZoom === 'number' ? s.mapZoom : (s.mapZoom ? Number(s.mapZoom) : 6),
+          radius: s.radius !== undefined && s.radius !== null ? Number(s.radius) : 0,
           isActive: s.isActive,
         }));
         const ex = (s.images || []).map((img: any) => ({ id: img.id, imageUrl: img.imageUrl }));
         setEditExistingImages(ex);
+        const subBadgesData = (s.subBadges || []).map((badge: any) => ({ name: badge.name, iconUrl: badge.iconUrl || '' }));
+        setEditSubBadges(subBadgesData);
         if (Array.isArray(s.availability) && s.availability.length > 0) {
           const dates = s.availability.map((a: any) => new Date(a.date));
           const min = new Date(Math.min.apply(null, dates as any));
@@ -581,8 +620,16 @@ export default function AdminServicesPage() {
           latitude: service.latitude,
           longitude: service.longitude,
           mapZoom: service.mapZoom ?? 6,
+          radius: (service as any).radius !== undefined && (service as any).radius !== null ? Number((service as any).radius) : 0,
           isActive: service.isActive
         }));
+        // Try to get subBadges from service object if available
+        if ((service as any).subBadges) {
+          const subBadgesData = ((service as any).subBadges || []).map((badge: any) => ({ name: badge.name, iconUrl: badge.iconUrl || '' }));
+          setEditSubBadges(subBadgesData);
+        } else {
+          setEditSubBadges([]);
+        }
       }
     } catch (e) {
       console.error('Error loading service details', e);
@@ -608,7 +655,9 @@ export default function AdminServicesPage() {
             ? parseFloat(serviceData.price) 
             : serviceData.price?.toNumber ? serviceData.price.toNumber() : 0),
           mapZoom: typeof serviceData.mapZoom === 'number' ? serviceData.mapZoom : (serviceData.mapZoom ? Number(serviceData.mapZoom) : 6),
+          radius: serviceData.radius !== undefined && serviceData.radius !== null ? Number(serviceData.radius) : undefined,
           images: serviceData.images || [], // Ensure images array is included
+          subBadges: serviceData.subBadges || [], // Ensure subBadges array is included
           price: serviceData.price // Keep original for reference
         };
         setSelectedService(normalizedService);
@@ -828,15 +877,20 @@ export default function AdminServicesPage() {
                         <Label htmlFor="description" className="text-negro-100 font-raleway-medium-14pt">Descripción</Label>
                         <Textarea id="description" value={formData.description} onChange={(e)=> setFormData(prev=>({...prev, description: e.target.value}))} className="border-grisprimario-10 focus:border-verdeprimario-100" rows={6} />
                       </div>
+                      <div>
+                        <SubBadgeManager badges={subBadges} onChange={setSubBadges} />
+                      </div>
                     </div>
                     <div className="space-y-4">
-                      <div>
-                        <Label className="text-negro-100 font-raleway-medium-14pt">Rango de fechas</Label>
-                        <div className="flex gap-2 mt-2">
-                          <Input type="date" value={startDate} onChange={(e)=>setStartDate(e.target.value)} />
-                          <Input type="date" value={endDate} onChange={(e)=>setEndDate(e.target.value)} />
-                        </div>
-                      </div>
+                      <AdminDateRangePicker
+                        label="Rango de fechas"
+                        startDate={startDate}
+                        endDate={endDate}
+                        onDateChange={(start, end) => {
+                          setStartDate(start);
+                          setEndDate(end);
+                        }}
+                      />
                       <div className="grid grid-cols-3 gap-3">
                         <div>
                           <Label className="text-negro-100 font-raleway-medium-14pt">Precio</Label>
@@ -918,6 +972,19 @@ export default function AdminServicesPage() {
                         onZoomChange={(z)=> { setMapZoom(z); localStorage.setItem('serviceMapZoom:new', String(z)); }}
                       />
                       <div className="text-xs text-grisprimario-200 mt-2">Zoom actual: {mapZoom}</div>
+                    </div>
+                    <div>
+                      <Label htmlFor="radius" className="text-negro-100 font-raleway-medium-14pt">Radio (KM)</Label>
+                      <Input
+                        id="radius"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={formData.radius}
+                        onChange={(e) => setFormData(prev => ({ ...prev, radius: Number(e.target.value) || 0 }))}
+                        className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        placeholder="Ej: 50"
+                      />
                     </div>
                     <div>
                       <Label htmlFor="latitude" className="text-negro-100 font-raleway-medium-14pt">Latitud</Label>
@@ -1106,6 +1173,21 @@ export default function AdminServicesPage() {
                         {selectedService.isActive ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </div>
+                    {((selectedService as any).subBadges && (selectedService as any).subBadges.length > 0) && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {(selectedService as any).subBadges.map((badge: any) => (
+                          <Badge key={badge.id} variant="secondary" className="bg-verdesecundario-100 text-blanco-100 font-raleway-medium-14pt">
+                            {badge.iconUrl && (
+                              <img src={badge.iconUrl || "/figmaAssets/subBadge.svg"} alt={badge.name} className="w-4 h-4 mr-1" />
+                            )}
+                            {!badge.iconUrl && (
+                              <img src="/figmaAssets/subBadge.svg" alt={badge.name} className="w-4 h-4 mr-1" />
+                            )}
+                            {badge.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                     <p className="text-grisprimario-200 font-raleway-medium-14pt mb-4">
                       {selectedService.description}
                     </p>
@@ -1114,6 +1196,7 @@ export default function AdminServicesPage() {
                     <div>Min: {formData.priceMin || '-'} {formData.priceMin ? formData.priceCurrency : ''}</div>
                     <div>Max: {formData.priceMax || '-'} {formData.priceMax ? formData.priceCurrency : ''}</div>
                     <div>Unidad: {units.find(u=>u.id===formData.unit_id)?.name || '-'}</div>
+                    <div>Radio: {selectedService.radius ? `${selectedService.radius} KM` : '-'}</div>
                     <div>Fechas: {(editStartDate||'')}{editStartDate&&editEndDate?' - ':''}{(editEndDate||'')}</div>
                   </div>
                   </div>
@@ -1230,15 +1313,20 @@ export default function AdminServicesPage() {
                     <Label htmlFor="edit-description" className="text-negro-100 font-raleway-medium-14pt">Descripción</Label>
                     <Textarea id="edit-description" value={formData.description} onChange={(e)=> setFormData(prev=>({...prev, description: e.target.value}))} className="border-grisprimario-10 focus:border-verdeprimario-100" rows={6} />
                   </div>
+                  <div>
+                    <SubBadgeManager badges={editSubBadges} onChange={setEditSubBadges} />
+                  </div>
                 </div>
                 <div className="space-y-4">
-                  <div>
-                    <Label className="text-negro-100 font-raleway-medium-14pt">Rango de fechas</Label>
-                    <div className="flex gap-2 mt-2">
-                      <Input type="date" value={editStartDate} onChange={(e)=> setEditStartDate(e.target.value)} />
-                      <Input type="date" value={editEndDate} onChange={(e)=> setEditEndDate(e.target.value)} />
-                    </div>
-                  </div>
+                  <AdminDateRangePicker
+                    label="Rango de fechas"
+                    startDate={editStartDate}
+                    endDate={editEndDate}
+                    onDateChange={(start, end) => {
+                      setEditStartDate(start);
+                      setEditEndDate(end);
+                    }}
+                  />
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <Label className="text-negro-100 font-raleway-medium-14pt">Precio</Label>
@@ -1324,6 +1412,22 @@ export default function AdminServicesPage() {
                         onZoomChange={(z)=> { setFormData(prev=>({...prev, mapZoom: z})); if (selectedService?.id) { localStorage.setItem(`serviceMapZoom:${selectedService.id}`, String(z)); } else { localStorage.setItem('serviceMapZoom:new', String(z)); } }}
                 />
                 <div className="text-xs text-grisprimario-200 mt-2">Zoom actual: {formData.mapZoom}</div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="edit-radius" className="text-negro-100 font-raleway-medium-14pt">Radio (KM)</Label>
+                  <Input
+                    id="edit-radius"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formData.radius}
+                    onChange={(e) => setFormData(prev => ({ ...prev, radius: Number(e.target.value) || 0 }))}
+                    className="border-grisprimario-10 focus:border-verdeprimario-100"
+                    placeholder="Ej: 50"
+                  />
+                </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">

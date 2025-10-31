@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DynamicNavigation } from "@/components/DynamicNavigation";
 import { ServiceSearchSection } from "@/components/sections/ServiceSearchSection";
+import { ServiceBadgesSection } from "@/components/sections/ServiceBadgesSection";
 import { ServiceDetailsCard } from "@/components/sections/ServiceDetailsCard";
 import { ImageGallerySection } from "@/components/sections/ImageGallerySection";
 import { LocationBadgesSection } from "@/components/sections/LocationBadgesSection";
@@ -47,6 +48,8 @@ export default function ServiceDetailsPage(): JSX.Element {
   const priceLabel = service ? `${priceUnit} ${Math.round((service as any).price || (service as any).pricePerHour || 0)}/hora` : undefined;
   const contact = service?.user?.email || undefined;
   const description = service?.description || undefined;
+  const zone = service ? `${service.department || ""}${service.city && service.department ? ", " : ""}${service.city || ""}`.trim() : undefined;
+  const radius = service?.radius ? `Radio de ${service.radius} KM` : undefined;
 
   return (
     <div className="bg-grisprimario-100 w-full min-h-screen flex flex-col">
@@ -69,9 +72,13 @@ export default function ServiceDetailsPage(): JSX.Element {
         <div className="w-full max-w-6xl mx-auto px-4 mb-8">
           <div className="flex gap-8">
             <div className="flex-1">
+              <ServiceBadgesSection 
+                serviceTitle={service?.title} 
+                subBadges={(service as any)?.subBadges || []} 
+              />
               <ServiceDetailsCard contractorName={contractorName} priceLabel={priceLabel} contact={contact} description={description} />
               <div className="mt-6">{(ImageGallerySection as any)({ images: galleryImages })}</div>
-              <div className="mt-6"><LocationBadgesSection /></div>
+              <div className="mt-6"><LocationBadgesSection zone={zone} radius={radius} /></div>
             </div>
             <div className="w-[300px] flex-shrink-0 flex flex-col items-center">
               <CalendarSection availableDates={(service?.availability || []).map((a: any) => a.date)} />

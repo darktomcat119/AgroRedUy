@@ -589,6 +589,39 @@ class ApiClient {
     });
   }
 
+  // Sub-badge endpoints
+  async getSubBadges() {
+    return this.request<any[]>('/admin/sub-badges');
+  }
+
+  async createSubBadge(subBadgeData: {
+    name: string;
+    iconUrl?: string;
+    serviceId: string;
+  }) {
+    return this.request<any>('/admin/sub-badges', {
+      method: 'POST',
+      body: JSON.stringify(subBadgeData)
+    });
+  }
+
+  async updateSubBadge(id: string, subBadgeData: {
+    name?: string;
+    iconUrl?: string;
+    sortOrder?: number;
+  }) {
+    return this.request<any>(`/admin/sub-badges/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(subBadgeData)
+    });
+  }
+
+  async deleteSubBadge(id: string) {
+    return this.request<void>(`/admin/sub-badges/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
   // Security API methods
   async getSecurityLogs(filters: {
     page?: number;

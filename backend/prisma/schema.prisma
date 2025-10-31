@@ -70,6 +70,7 @@ model Service {
   latitude     Decimal
   longitude    Decimal
   mapZoom      Int            @default(6) @map("map_zoom")
+  radius       Int?           @map("radius") // Service radius in kilometers
   address      String
   city         String
   department   String
@@ -80,6 +81,7 @@ model Service {
   bookings     Booking[]
   reviews      Review[]
   images       ServiceImage[]
+  subBadges    ServiceSubBadge[]
   category     Category       @relation(fields: [categoryId], references: [id])
   units        units          @relation(fields: [unit_id], references: [id])
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -97,6 +99,18 @@ model ServiceImage {
   service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@map("service_images")
+}
+
+model ServiceSubBadge {
+  id        String   @id @default(uuid())
+  serviceId String   @map("service_id")
+  name      String
+  iconUrl   String?  @map("icon_url")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@map("service_sub_badges")
 }
 
 model Availability {

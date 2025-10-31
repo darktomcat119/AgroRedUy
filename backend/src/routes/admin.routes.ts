@@ -281,6 +281,44 @@ router.delete('/categories/:id',
   adminController.deleteCategory
 );
 
+// Sub-badge management routes
+router.get('/sub-badges',
+  requireAdmin,
+  adminController.getSubBadges
+);
+
+router.post('/sub-badges',
+  requireSuperAdmin,
+  [
+    body('name').trim().notEmpty().withMessage('Name is required'),
+    body('serviceId').isUUID().withMessage('Valid serviceId is required'),
+    body('iconUrl').optional().isString().withMessage('iconUrl must be a string')
+  ],
+  validateRequest,
+  adminController.createSubBadge
+);
+
+router.put('/sub-badges/:id',
+  requireSuperAdmin,
+  [
+    param('id').isUUID().withMessage('Invalid sub-badge ID'),
+    body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
+    body('iconUrl').optional().isString().withMessage('iconUrl must be a string'),
+    body('sortOrder').optional().isInt({ min: 0 }).withMessage('sortOrder must be a non-negative integer')
+  ],
+  validateRequest,
+  adminController.updateSubBadge
+);
+
+router.delete('/sub-badges/:id',
+  requireSuperAdmin,
+  [
+    param('id').isUUID().withMessage('Invalid sub-badge ID')
+  ],
+  validateRequest,
+  adminController.deleteSubBadge
+);
+
 // Security monitoring routes (Super Admin only)
 router.get('/security/logs',
   requireSuperAdmin,

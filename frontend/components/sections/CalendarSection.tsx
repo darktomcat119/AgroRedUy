@@ -120,17 +120,17 @@ export const CalendarSection = ({ availableDates }: { availableDates?: string[] 
             const selected = (startDate && cell.date.toDateString() === startDate.toDateString()) || (endDate && cell.date.toDateString() === endDate.toDateString()) || inRange(cell.date);
             const disabled = !isAvailable(cell.date);
             return (
-              <Button
+            <Button
                 key={`day-${idx}`}
-                variant="ghost"
+              variant="ghost"
                 disabled={disabled}
                 onClick={() => onDayClick(cell.date)}
                 className={`w-[30px] h-[30px] p-0 flex items-center justify-center hover:bg-naranja-100/10 ${selected ? 'bg-naranja-100 rounded-[5px] hover:bg-naranja-100' : ''} ${!cell.isCurrentMonth ? 'w-[25px] h-[25px]' : ''}`}
               >
                 <div className={`font-raleway-medium-16pt text-center ${selected ? 'text-blanco-100' : cell.isCurrentMonth ? 'text-negro-100' : 'text-grissecundario-100'} ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}>
                   {cell.date.getDate()}
-                </div>
-              </Button>
+              </div>
+            </Button>
             );
           })}
         </div>

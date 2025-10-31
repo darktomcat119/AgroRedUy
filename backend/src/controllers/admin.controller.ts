@@ -730,6 +730,9 @@ export class AdminController {
                 id: true,
                 name: true
               }
+            },
+            subBadges: {
+              orderBy: { sortOrder: 'asc' }
             }
           },
           orderBy: { createdAt: 'desc' }
@@ -794,6 +797,9 @@ export class AdminController {
             }
           },
           images: {
+            orderBy: { sortOrder: 'asc' }
+          },
+          subBadges: {
             orderBy: { sortOrder: 'asc' }
           },
           availability: {
@@ -883,6 +889,7 @@ export class AdminController {
       if (typeof updateData.priceCurrency === 'string') prismaData.priceCurrency = updateData.priceCurrency;
       if (updateData.latitude !== undefined) prismaData.latitude = Number(updateData.latitude);
       if (updateData.longitude !== undefined) prismaData.longitude = Number(updateData.longitude);
+      if (updateData.radius !== undefined) prismaData.radius = updateData.radius !== null ? Number(updateData.radius) : null;
       if (typeof updateData.address === 'string') prismaData.address = updateData.address;
       if (typeof updateData.city === 'string') prismaData.city = updateData.city;
       if (typeof updateData.department === 'string') prismaData.department = updateData.department;
@@ -904,34 +911,35 @@ export class AdminController {
       delete (updateData as any).updatedAt;
       delete (updateData as any).schedule;
       delete (updateData as any).images;
+      delete (updateData as any).subBadges;
 
-      const service = await prisma.service.update({
+      // Update service (we'll re-fetch with all relations after handling subBadges and schedule)
+      await prisma.service.update({
         where: { id },
-        data: prismaData,
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          category: {
-            select: {
-              id: true,
-              name: true
-            }
-          },
-          units: {
-            select: {
-              id: true,
-              name: true,
-              symbol: true
-            }
+        data: prismaData
+      });
+
+      // Handle sub-badges update: delete existing and create new ones
+      const subBadges = (req.body as any).subBadges;
+      if (Array.isArray(subBadges)) {
+        // Delete existing sub-badges
+        await prisma.serviceSubBadge.deleteMany({ where: { serviceId: id } });
+        
+        // Create new sub-badges
+        if (subBadges.length > 0) {
+          let sortOrder = 0;
+          for (const badge of subBadges) {
+            await prisma.serviceSubBadge.create({
+              data: {
+                serviceId: id,
+                name: String(badge.name),
+                iconUrl: badge.iconUrl ? String(badge.iconUrl) : null,
+                sortOrder: sortOrder++
+              }
+            });
           }
         }
-      });
+      }
 
       // If schedule provided, reset availability for this service to the new range (full-day if times omitted)
       if (schedule && schedule.startDate && schedule.endDate) {
@@ -956,9 +964,46 @@ export class AdminController {
         }
       }
 
+      // Re-fetch service with all related data (subBadges, availability, images) to include in response
+      const updatedService = await prisma.service.findUnique({
+        where: { id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          category: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          units: {
+            select: {
+              id: true,
+              name: true,
+              symbol: true
+            }
+          },
+          subBadges: {
+            orderBy: { sortOrder: 'asc' }
+          },
+          images: {
+            orderBy: { sortOrder: 'asc' }
+          },
+          availability: {
+            orderBy: { date: 'asc' }
+          }
+        }
+      });
+
       res.json({
         success: true,
-        data: service,
+        data: updatedService,
         message: 'Service updated successfully'
       });
     } catch (error: any) {
@@ -1076,13 +1121,15 @@ export class AdminController {
         latitude,
         longitude,
         mapZoom,
+        radius,
         address,
         city,
         department,
         categoryId,
         unit_id,
         images = [],
-        schedule
+        schedule,
+        subBadges = []
       } = req.body as any;
       // Pre-validate FK references to avoid Prisma P2003
       const [category, unit] = await Promise.all([
@@ -1111,6 +1158,7 @@ export class AdminController {
         latitude: Number(latitude),
         longitude: Number(longitude),
         mapZoom: mapZoom !== undefined ? Number(mapZoom) : 6,
+        radius: radius !== undefined && radius !== null ? Number(radius) : undefined,
         address: String(address),
         city: String(city),
         department: String(department),
@@ -1129,6 +1177,21 @@ export class AdminController {
               imageUrl: url,
               sortOrder: order++,
               isPrimary: order === 1
+            }
+          });
+        }
+      }
+
+      // Create sub-badges if provided
+      if (Array.isArray(subBadges) && subBadges.length > 0) {
+        let sortOrder = 0;
+        for (const badge of subBadges) {
+          await prisma.serviceSubBadge.create({
+            data: {
+              serviceId: created.id,
+              name: String(badge.name),
+              iconUrl: badge.iconUrl ? String(badge.iconUrl) : null,
+              sortOrder: sortOrder++
             }
           });
         }
@@ -2036,6 +2099,230 @@ export class AdminController {
         error: {
           code: 'CATEGORY_DELETE_ERROR',
           message: 'Failed to delete category'
+        }
+      });
+    }
+  }
+
+  /**
+   * Get all sub-badges (across all services)
+   */
+  public async getSubBadges(_req: AuthRequest, res: Response) {
+    try {
+      const subBadges = await prisma.serviceSubBadge.findMany({
+        include: {
+          service: {
+            select: {
+              id: true,
+              title: true
+            }
+          }
+        },
+        orderBy: { name: 'asc' }
+      });
+
+      res.json({
+        success: true,
+        data: subBadges
+      });
+    } catch (error) {
+      console.error('Error fetching sub-badges:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'SUB_BADGES_FETCH_ERROR',
+          message: 'Failed to fetch sub-badges'
+        }
+      });
+    }
+  }
+
+  /**
+   * Create a new sub-badge
+   */
+  public async createSubBadge(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { name, iconUrl, serviceId } = req.body;
+
+      if (!name || !serviceId) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_DATA',
+            message: 'name and serviceId are required'
+          }
+        });
+        return;
+      }
+
+      // Check if service exists
+      const service = await prisma.service.findUnique({
+        where: { id: serviceId }
+      });
+
+      if (!service) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'SERVICE_NOT_FOUND',
+            message: 'Service not found'
+          }
+        });
+        return;
+      }
+
+      // Get max sortOrder for this service
+      const maxSort = await prisma.serviceSubBadge.findFirst({
+        where: { serviceId },
+        orderBy: { sortOrder: 'desc' }
+      });
+
+      const subBadge = await prisma.serviceSubBadge.create({
+        data: {
+          name,
+          iconUrl: iconUrl || null,
+          serviceId,
+          sortOrder: maxSort ? maxSort.sortOrder + 1 : 0
+        },
+        include: {
+          service: {
+            select: {
+              id: true,
+              title: true
+            }
+          }
+        }
+      });
+
+      res.status(201).json({
+        success: true,
+        data: subBadge
+      });
+    } catch (error) {
+      console.error('Error creating sub-badge:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'SUB_BADGE_CREATE_ERROR',
+          message: 'Failed to create sub-badge'
+        }
+      });
+    }
+  }
+
+  /**
+   * Update a sub-badge
+   */
+  public async updateSubBadge(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      // Check if sub-badge exists
+      const existingSubBadge = await prisma.serviceSubBadge.findUnique({
+        where: { id }
+      });
+
+      if (!existingSubBadge) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'SUB_BADGE_NOT_FOUND',
+            message: 'Sub-badge not found'
+          }
+        });
+        return;
+      }
+
+      // If updating serviceId, verify service exists
+      if (updateData.serviceId) {
+        const service = await prisma.service.findUnique({
+          where: { id: updateData.serviceId }
+        });
+
+        if (!service) {
+          res.status(404).json({
+            success: false,
+            error: {
+              code: 'SERVICE_NOT_FOUND',
+              message: 'Service not found'
+            }
+          });
+          return;
+        }
+      }
+
+      const updatedSubBadge = await prisma.serviceSubBadge.update({
+        where: { id },
+        data: {
+          name: updateData.name,
+          iconUrl: updateData.iconUrl !== undefined ? updateData.iconUrl : undefined,
+          sortOrder: updateData.sortOrder !== undefined ? updateData.sortOrder : undefined
+        },
+        include: {
+          service: {
+            select: {
+              id: true,
+              title: true
+            }
+          }
+        }
+      });
+
+      res.json({
+        success: true,
+        data: updatedSubBadge
+      });
+    } catch (error) {
+      console.error('Error updating sub-badge:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'SUB_BADGE_UPDATE_ERROR',
+          message: 'Failed to update sub-badge'
+        }
+      });
+    }
+  }
+
+  /**
+   * Delete a sub-badge
+   */
+  public async deleteSubBadge(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      // Check if sub-badge exists
+      const existingSubBadge = await prisma.serviceSubBadge.findUnique({
+        where: { id }
+      });
+
+      if (!existingSubBadge) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'SUB_BADGE_NOT_FOUND',
+            message: 'Sub-badge not found'
+          }
+        });
+        return;
+      }
+
+      await prisma.serviceSubBadge.delete({
+        where: { id }
+      });
+
+      res.json({
+        success: true,
+        message: 'Sub-badge deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error deleting sub-badge:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'SUB_BADGE_DELETE_ERROR',
+          message: 'Failed to delete sub-badge'
         }
       });
     }
