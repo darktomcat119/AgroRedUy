@@ -10,6 +10,7 @@ export interface CreateServiceData {
   priceCurrency?: string;
   latitude: number;
   longitude: number;
+  mapZoom?: number;
   address: string;
   city: string;
   department: string;
@@ -26,6 +27,7 @@ export interface UpdateServiceData {
   priceMax?: number;
   latitude?: number;
   longitude?: number;
+  mapZoom?: number;
   address?: string;
   city?: string;
   department?: string;
@@ -108,6 +110,7 @@ export class ServiceService {
         priceCurrency: data.priceCurrency,
         latitude: data.latitude,
         longitude: data.longitude,
+        mapZoom: data.mapZoom ?? 6,
         address: data.address,
         city: data.city,
         department: data.department,

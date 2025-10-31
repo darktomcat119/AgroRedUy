@@ -138,6 +138,22 @@ export const ConfirmDialogs = {
     icon: isActive ? 'block' : 'unblock' as const
   }),
   
+  createService: () => ({
+    title: 'Crear Servicio',
+    description: '¿Estás seguro de que quieres crear este nuevo servicio?',
+    confirmText: 'Crear Servicio',
+    variant: 'info' as const,
+    icon: 'add' as const
+  }),
+  
+  editService: (serviceName: string) => ({
+    title: 'Editar Servicio',
+    description: `¿Estás seguro de que quieres guardar los cambios para el servicio "${serviceName}"?`,
+    confirmText: 'Guardar Cambios',
+    variant: 'info' as const,
+    icon: 'edit' as const
+  }),
+  
   deleteService: (serviceName: string) => ({
     title: 'Eliminar Servicio',
     description: `¿Estás seguro de que quieres eliminar el servicio "${serviceName}"? Esta acción no se puede deshacer.`,

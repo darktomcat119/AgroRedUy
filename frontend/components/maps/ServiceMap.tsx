@@ -10,6 +10,7 @@ interface ServiceMapProps {
   height?: number;
   className?: string;
   onPositionChange?: (lat: number, lng: number) => void;
+  onZoomChange?: (zoom: number) => void;
 }
 
 export function ServiceMap({
@@ -19,11 +20,13 @@ export function ServiceMap({
   height = 300,
   className = '',
   onPositionChange,
+  onZoomChange,
 }: ServiceMapProps) {
   const [position, setPosition] = useState<[number, number]>([
     Number(initialLat),
     Number(initialLng),
   ]);
+  const [currentZoom, setCurrentZoom] = useState<number>(Number(zoom) || 6);
 
   useEffect(() => {
     setPosition([Number(initialLat), Number(initialLng)]);
@@ -37,7 +40,14 @@ export function ServiceMap({
         height={height}
         center={center}
         defaultCenter={center}
-        defaultZoom={zoom}
+        defaultZoom={currentZoom}
+        onBoundsChanged={({ zoom: z }: { zoom: number }) => {
+          const zNum = Number(z);
+          if (!isNaN(zNum) && zNum !== currentZoom) {
+            setCurrentZoom(zNum);
+            if (onZoomChange) onZoomChange(zNum);
+          }
+        }}
         onClick={({ latLng }: { latLng: [number, number] }) => {
           const [lat, lng] = latLng as [number, number];
           if (lat !== position[0] || lng !== position[1]) {

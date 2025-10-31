@@ -887,6 +887,7 @@ export class AdminController {
       if (typeof updateData.city === 'string') prismaData.city = updateData.city;
       if (typeof updateData.department === 'string') prismaData.department = updateData.department;
       if (typeof updateData.isActive === 'boolean') prismaData.isActive = updateData.isActive;
+      if (updateData.mapZoom !== undefined) prismaData.mapZoom = Number(updateData.mapZoom);
 
       // Relations
       if (updateData.categoryId) {
@@ -1071,8 +1072,10 @@ export class AdminController {
         price,
         priceMin,
         priceMax,
+        priceCurrency,
         latitude,
         longitude,
+        mapZoom,
         address,
         city,
         department,
@@ -1104,9 +1107,10 @@ export class AdminController {
         price: Number(price),
         priceMin: priceMin !== undefined ? Number(priceMin) : undefined,
         priceMax: priceMax !== undefined ? Number(priceMax) : undefined,
-        priceCurrency: (req.body as any).priceCurrency ? String((req.body as any).priceCurrency) : undefined,
+        priceCurrency: priceCurrency ? String(priceCurrency) : undefined,
         latitude: Number(latitude),
         longitude: Number(longitude),
+        mapZoom: mapZoom !== undefined ? Number(mapZoom) : 6,
         address: String(address),
         city: String(city),
         department: String(department),

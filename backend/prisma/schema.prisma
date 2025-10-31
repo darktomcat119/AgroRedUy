@@ -69,6 +69,7 @@ model Service {
   priceCurrency String        @default("UYU") @map("price_currency")
   latitude     Decimal
   longitude    Decimal
+  mapZoom      Int            @default(6) @map("map_zoom")
   address      String
   city         String
   department   String
