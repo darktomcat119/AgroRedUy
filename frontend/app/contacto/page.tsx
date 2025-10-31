@@ -3,18 +3,15 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Navigation } from "@/components/Navigation";
+import { DynamicNavigation } from "@/components/DynamicNavigation";
 import Link from "next/link";
 
 const navigationItems = [
-  { label: "Inicio", active: true, href: "/" },
-  { label: "Servicios", active: false, href: "/servicios" },
+  { label: "Inicio", href: "/" },
+  { label: "Servicios", href: "/services/list" },
 ];
 
-const navigationItemsRight = [
-  { label: "Contacto", active: false, href: "/contacto" },
-  { label: "Iniciar Sesión", active: false, href: "/login" },
-];
+// Note: DynamicNavigation generates rightItems automatically based on auth state
 
 const contactInfo = [
   {
@@ -48,10 +45,11 @@ export default function ContactoPage(): JSX.Element {
           src="/figmaAssets/rectangle-23.png"
         />
 
-        <Navigation
+        <DynamicNavigation
           leftItems={navigationItems}
-          rightItems={navigationItemsRight}
           variant="home"
+          sticky={false}
+          containerTransparent={true}
           className="relative h-[182px] max-w-[1440px] mx-auto w-full"
         />
       </header>

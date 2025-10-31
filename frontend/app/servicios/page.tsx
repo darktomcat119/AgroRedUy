@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Navigation } from "@/components/Navigation";
+import { DynamicNavigation } from "@/components/DynamicNavigation";
 import { ServiceSearchSection } from "@/components/sections/ServiceSearchSection";
 import { ServiceDetailsCard } from "@/components/sections/ServiceDetailsCard";
 import { ImageGallerySection } from "@/components/sections/ImageGallerySection";
@@ -32,21 +32,17 @@ const galleryImages = [
 ];
 
 const navigationItems = [
-  { label: "Inicio", active: false, href: "/" },
-  { label: "Servicios", active: true, href: "/servicios" },
+  { label: "Inicio", href: "/" },
+  { label: "Servicios", href: "/services/list" },
 ];
 
-const authItems = [
-  { label: "Contacto", active: false, href: "/contacto" },
-  { label: "Iniciar Sesión", active: false, href: "/login" },
-];
+// Note: DynamicNavigation generates rightItems automatically based on auth state
 
 export default function ServiciosPage(): JSX.Element {
   return (
     <div className="bg-grisprimario-100 w-full min-h-screen flex flex-col">
-      <Navigation
+      <DynamicNavigation
         leftItems={navigationItems}
-        rightItems={authItems}
         variant="service"
       />
 

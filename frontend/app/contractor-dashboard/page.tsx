@@ -60,8 +60,8 @@ export default function ContractorDashboardPage(): JSX.Element {
     <div className="min-h-screen bg-blanco-100">
       <DynamicNavigation 
         leftItems={[
-          { label: "Inicio", active: false, href: "/" },
-          { label: "Servicios", active: false, href: "/servicios" },
+          { label: "Inicio", href: "/" },
+          { label: "Servicios", href: "/services/list" },
         ]}
         variant="service"
       />

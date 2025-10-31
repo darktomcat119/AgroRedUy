@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Navigation } from '@/components/Navigation';
+import { DynamicNavigation } from '@/components/DynamicNavigation';
 import { ServiceSearchSection } from '@/components/sections/ServiceSearchSection';
 import { ServiceDetailsCard } from '@/components/sections/ServiceDetailsCard';
 import { ImageGallerySection } from '@/components/sections/ImageGallerySection';
@@ -37,13 +37,10 @@ export default function ServiceDetailsPage(): JSX.Element {
   }, [id]);
 
   const navigationItems = [
-    { label: 'Inicio', active: false, href: '/' },
-    { label: 'Servicios', active: true, href: '/servicios' },
+    { label: 'Inicio', href: '/' },
+    { label: 'Servicios', href: '/services/list' },
   ];
-  const authItems = [
-    { label: 'Contacto', active: false, href: '/contacto' },
-    { label: 'Iniciar Sesión', active: false, href: '/login' },
-  ];
+  // Note: DynamicNavigation generates rightItems automatically based on auth state
 
   const galleryImages = (service?.images || []).map((img: any) => img.imageUrl);
   const contractorName = service ? `${service.user?.firstName || ''} ${service.user?.lastName || ''}`.trim() : undefined;
@@ -53,7 +50,7 @@ export default function ServiceDetailsPage(): JSX.Element {
 
   return (
     <div className="bg-grisprimario-100 w-full min-h-screen flex flex-col">
-      <Navigation leftItems={navigationItems} rightItems={authItems} variant="service" />
+      <DynamicNavigation leftItems={navigationItems} variant="service" />
 
       <main className="flex-1 w-full py-8">
         <div className="w-full flex justify-center mb-8">

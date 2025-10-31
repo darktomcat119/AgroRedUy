@@ -1,18 +1,15 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Navigation } from "@/components/Navigation";
+import { DynamicNavigation } from "@/components/DynamicNavigation";
 import Link from "next/link";
 
 const navigationItems = [
-  { label: "Inicio", active: true, href: "/" },
-  { label: "Servicios", active: false, href: "/servicios" },
+  { label: "Inicio", href: "/" },
+  { label: "Servicios", href: "/services/list" },
 ];
 
-const navigationItemsRight = [
-  { label: "Contacto", active: false, href: "/contacto" },
-  { label: "Iniciar Sesión", active: false, href: "/login" },
-];
+// Note: DynamicNavigation generates rightItems automatically based on auth state
 
 const features = [
   {
@@ -67,10 +64,11 @@ export default function HomePage(): JSX.Element {
       {/* Responsive Header */}
       <header className="absolute top-0 left-0 w-full z-20">
         <div className="w-full max-w-7xl mx-auto">
-          <Navigation
+          <DynamicNavigation
             leftItems={navigationItems}
-            rightItems={navigationItemsRight}
             variant="home"
+            sticky={false}
+            containerTransparent={true}
           />
         </div>
       </header>

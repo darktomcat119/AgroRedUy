@@ -51,13 +51,6 @@ const superAdminNavItems = [
     superAdminOnly: false
   },
   {
-    label: 'Reportes',
-    href: '/admin/reports',
-    icon: FileText,
-    description: 'Reportes y estadísticas',
-    superAdminOnly: true
-  },
-  {
     label: 'Configuración',
     href: '/admin/settings',
     icon: Settings,
@@ -200,8 +193,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   // Navigation items for admin pages
   const leftItems = [
-    { label: "Inicio", active: false, href: "/" },
-    { label: "Servicios", active: false, href: "/servicios" },
+    { label: "Inicio", href: "/" },
+    { label: "Servicios", href: "/services/list" },
   ];
 
   return (

@@ -27,8 +27,8 @@ const buttonPositions = [
 ];
 
 const navigationItems = [
-  { label: "Inicio", active: false, href: "/" },
-  { label: "Servicios", active: true, href: "/services/list" },
+  { label: "Inicio", href: "/" },
+  { label: "Servicios", href: "/services/list" },
 ];
 
 const authItems = [

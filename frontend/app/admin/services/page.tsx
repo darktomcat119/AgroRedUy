@@ -599,6 +599,7 @@ export default function AdminServicesPage() {
         const serviceData = (resp as any).data;
         // Normalize price: convert price (Decimal) to pricePerHour (number)
         // Normalize mapZoom: ensure it's a number
+        // Include images array from API response
         const normalizedService = {
           ...serviceData,
           pricePerHour: serviceData.pricePerHour ?? (typeof serviceData.price === 'number' 
@@ -607,6 +608,7 @@ export default function AdminServicesPage() {
             ? parseFloat(serviceData.price) 
             : serviceData.price?.toNumber ? serviceData.price.toNumber() : 0),
           mapZoom: typeof serviceData.mapZoom === 'number' ? serviceData.mapZoom : (serviceData.mapZoom ? Number(serviceData.mapZoom) : 6),
+          images: serviceData.images || [], // Ensure images array is included
           price: serviceData.price // Keep original for reference
         };
         setSelectedService(normalizedService);
@@ -1138,11 +1140,19 @@ export default function AdminServicesPage() {
                     </div>
                   </div>
                 </div>
-              {(editExistingImages.length > 0) && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {editExistingImages.map(img => (
-                    <img key={img.id} src={`/api/image-proxy?url=${encodeURIComponent(img.imageUrl)}`} alt="img" className="w-full h-28 object-cover rounded-md border border-grisprimario-10" />
-                  ))}
+              {((selectedService as any).images && (selectedService as any).images.length > 0) && (
+                <div className="space-y-2">
+                  <h4 className="text-md font-bold text-negro-100 font-raleway-bold-16pt mb-2">Imágenes del Servicio</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {(selectedService as any).images.map((img: any) => (
+                      <img 
+                        key={img.id} 
+                        src={`/api/image-proxy?url=${encodeURIComponent(img.imageUrl)}`} 
+                        alt="Service image" 
+                        className="w-full h-28 object-cover rounded-md border border-grisprimario-10" 
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
                 

@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, User, Settings, LogOut, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { getImageUrl } from "@/lib/utils";
 
 export interface NavigationItem {
   label: string;
-  active: boolean;
+  active?: boolean; // Optional - will be determined automatically from pathname
   href: string;
 }
 
@@ -34,6 +34,7 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
   const [imageLoadError, setImageLoadError] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const userMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -86,20 +87,38 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
 
   const currentVariant = variants[variant];
 
-  const NavButton = ({ item }: { item: NavigationItem }) => (
-    <Link href={item.href}>
-      <Button
-        variant="ghost"
-        className={`h-[57px] px-6 lg:px-8 py-3 rounded-[50px] border border-solid border-white ${
-          item.active
-            ? `${currentVariant.activeBg} ${currentVariant.activeText}`
-            : `${currentVariant.inactiveBg} ${currentVariant.inactiveText}`
-        } font-raleway-bold-20pt font-[number:var(--raleway-bold-20pt-font-weight)] text-[length:var(--raleway-bold-20pt-font-size)] tracking-[var(--raleway-bold-20pt-letter-spacing)] leading-[var(--raleway-bold-20pt-line-height)] [font-style:var(--raleway-bold-20pt-font-style)] ${currentVariant.hoverBg} ${currentVariant.hoverText} transition-colors`}
-      >
-        {item.label}
-      </Button>
-    </Link>
-  );
+  // Determine if a nav item is active based on current pathname
+  const isItemActive = (href: string): boolean => {
+    if (!pathname) return false;
+    // Exact match for home page
+    if (href === '/') {
+      return pathname === '/';
+    }
+    // Exact match for specific routes like /contacto, /login
+    if (href === '/contacto' || href === '/login') {
+      return pathname === href;
+    }
+    // For other paths (like /services/list), check if pathname starts with the href
+    return pathname.startsWith(href);
+  };
+
+  const NavButton = ({ item }: { item: NavigationItem }) => {
+    const active = isItemActive(item.href);
+    return (
+      <Link href={item.href}>
+        <Button
+          variant="ghost"
+          className={`h-[57px] px-6 lg:px-8 py-3 rounded-[50px] border border-solid border-white ${
+            active
+              ? `${currentVariant.activeBg} ${currentVariant.activeText}`
+              : `${currentVariant.inactiveBg} ${currentVariant.inactiveText}`
+          } font-raleway-bold-20pt font-[number:var(--raleway-bold-20pt-font-weight)] text-[length:var(--raleway-bold-20pt-font-size)] tracking-[var(--raleway-bold-20pt-letter-spacing)] leading-[var(--raleway-bold-20pt-line-height)] [font-style:var(--raleway-bold-20pt-font-style)] ${currentVariant.hoverBg} ${currentVariant.hoverText} transition-colors`}
+        >
+          {item.label}
+        </Button>
+      </Link>
+    );
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -131,14 +150,17 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
   };
 
   const getRightItems = () => {
+    // When authenticated, only show "Contacto" in the right nav items
+    // The user dropdown will handle account-related actions
     if (isAuthenticated) {
       return [
-        { label: "Contacto", active: false, href: "/contacto" },
+        { label: "Contacto", href: "/contacto" },
       ];
     } else {
+      // When not authenticated, show "Contacto" and "Iniciar Sesión"
       return [
-        { label: "Contacto", active: false, href: "/contacto" },
-        { label: "Iniciar Sesión", active: false, href: "/login" },
+        { label: "Contacto", href: "/contacto" },
+        { label: "Iniciar Sesión", href: "/login" },
       ];
     }
   };
@@ -308,33 +330,41 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
             {/* Left Navigation Items */}
             <div className="flex flex-col space-y-2">
               <h3 className="text-white font-semibold mb-2">Navegación</h3>
-              {leftItems.map((item, index) => (
-                <Link key={index} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button
-                    variant="ghost"
-                    className={`w-full justify-start text-white ${
-                      item.active ? "bg-white/20" : ""
-                    }`}
-                  >
-                    {item.label}
-                  </Button>
-                </Link>
-              ))}
+              {leftItems.map((item, index) => {
+                const active = isItemActive(item.href);
+                return (
+                  <Link key={index} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button
+                      variant="ghost"
+                      className={`w-full justify-start text-white ${
+                        active ? "bg-white/20" : ""
+                      }`}
+                    >
+                      {item.label}
+                    </Button>
+                  </Link>
+                );
+              })}
             </div>
 
             {/* Right Navigation Items */}
             <div className="flex flex-col space-y-2">
               <h3 className="text-white font-semibold mb-2">Acceso</h3>
-              {rightItems.map((item, index) => (
-                <Link key={index} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-white"
-                  >
-                    {item.label}
-                  </Button>
-                </Link>
-              ))}
+              {rightItems.map((item, index) => {
+                const active = isItemActive(item.href);
+                return (
+                  <Link key={index} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button
+                      variant="ghost"
+                      className={`w-full justify-start text-white ${
+                        active ? "bg-white/20" : ""
+                      }`}
+                    >
+                      {item.label}
+                    </Button>
+                  </Link>
+                );
+              })}
             </div>
 
             {/* User Menu for Mobile */}

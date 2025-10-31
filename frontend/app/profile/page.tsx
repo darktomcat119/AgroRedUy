@@ -210,8 +210,8 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <DynamicNavigation 
         leftItems={[
-          { label: "Inicio", active: false, href: "/" },
-          { label: "Servicios", active: false, href: "/servicios" },
+          { label: "Inicio", href: "/" },
+          { label: "Servicios", href: "/services/list" },
         ]}
         variant="service"
       />
