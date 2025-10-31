@@ -148,7 +148,7 @@ export default function AdminCategoriesPage() {
 
   const loadServices = async () => {
     try {
-      const response = await apiClient.getAdminServices({ page: 1, limit: 1000 });
+      const response = await apiClient.getAdminServices({ page: 1, limit: 100 });
       if (response.success && response.data) {
         const servicesList = (response.data.services || []).map((s: any) => ({
           id: s.id,

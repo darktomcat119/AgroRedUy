@@ -69,7 +69,7 @@ export default function AdminScheduleRequestsPage() {
     try {
       setLoading(true);
       // Get all services owned by the admin
-      const servicesResp = await apiClient.getAdminServices({ page: 1, limit: 1000 });
+      const servicesResp = await apiClient.getAdminServices({ page: 1, limit: 100 });
       if (!servicesResp.success || !servicesResp.data) return;
 
       const services = (servicesResp.data as any).services || [];

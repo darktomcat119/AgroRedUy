@@ -256,7 +256,6 @@ dist
 # Backend specific
 backend/dist/
 backend/logs/
-backend/uploads/
 backend/.env
 backend/.env.local
 backend/.env.development.local
@@ -386,3 +385,7 @@ Thumbs.db
 # Local development files
 local/
 dev/
+
+# Markdown files (except README.md)
+*.md
+!README.md

@@ -14,6 +14,7 @@ interface Notification {
   title: string;
   message: string;
   relatedId?: string;
+  serviceId?: string;
   isRead: boolean;
   createdAt: string;
 }
@@ -34,12 +35,13 @@ export function NotificationDropdown() {
       try {
         setIsLoading(true);
         const [notificationsResp, countResp] = await Promise.all([
-          apiClient.getNotifications({ limit: 10 }),
+          apiClient.getNotifications({ unreadOnly: true, limit: 10 }),
           apiClient.getUnreadNotificationCount(),
         ]);
 
         if (notificationsResp.success && notificationsResp.data) {
-          setNotifications(notificationsResp.data);
+          // Filter to only show unread notifications in dropdown
+          setNotifications(notificationsResp.data.filter((n: Notification) => !n.isRead));
         }
 
         if (countResp.success && countResp.data) {
@@ -76,13 +78,14 @@ export function NotificationDropdown() {
     };
   }, [isOpen]);
 
-  const handleMarkAsRead = async (notificationId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleMarkAsRead = async (notificationId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     try {
       await apiClient.markNotificationAsRead(notificationId);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
-      );
+      // Remove from dropdown since we only show unread notifications
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -93,7 +96,8 @@ export function NotificationDropdown() {
     e.stopPropagation();
     try {
       await apiClient.markAllNotificationsAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      // Clear dropdown since we only show unread notifications
+      setNotifications([]);
       setUnreadCount(0);
     } catch (error) {
       console.error("Error marking all as read:", error);
@@ -101,15 +105,15 @@ export function NotificationDropdown() {
   };
 
   const handleNotificationClick = (notification: Notification) => {
-    if (!notification.isRead) {
-      handleMarkAsRead(notification.id, {} as React.MouseEvent);
-    }
+    // Mark as read when clicked (since we only show unread in dropdown)
+    handleMarkAsRead(notification.id);
 
-    // Navigate based on notification type
-    if (notification.type === "SCHEDULE_ACCEPTED" || notification.type === "SCHEDULE_REQUEST") {
-      if (notification.relatedId) {
-        router.push(`/profile?tab=notifications`);
-      }
+    // Navigate to service page if serviceId is available
+    if (notification.serviceId) {
+      router.push(`/services/${notification.serviceId}`);
+    } else {
+      // Fallback to profile notifications tab
+      router.push(`/profile?tab=notifications`);
     }
     setIsOpen(false);
   };
@@ -157,9 +161,7 @@ export function NotificationDropdown() {
                 <div
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
-                  className={`px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${
-                    !notification.isRead ? "bg-blue-50" : ""
-                  }`}
+                  className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 bg-blue-50"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -176,16 +178,15 @@ export function NotificationDropdown() {
                         })}
                       </p>
                     </div>
-                    {!notification.isRead && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleMarkAsRead(notification.id, e)}
-                        className="ml-2 h-6 w-6 p-0"
-                      >
-                        <Check className="w-4 h-4" />
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleMarkAsRead(notification.id, e)}
+                      className="ml-2 h-6 w-6 p-0"
+                      title="Marcar como leída"
+                    >
+                      <Check className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ))

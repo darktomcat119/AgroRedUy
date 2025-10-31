@@ -40,6 +40,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const activeTabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications'>(
@@ -624,7 +625,13 @@ export default function ProfilePage() {
                     {notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`border rounded-lg p-4 hover:bg-gray-50 transition-colors ${
+                        onClick={() => {
+                          // Navigate to service page if serviceId is available
+                          if ((notification as any).serviceId) {
+                            router.push(`/services/${(notification as any).serviceId}`);
+                          }
+                        }}
+                        className={`border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
                           !notification.isRead ? 'bg-blue-50 border-blue-200' : ''
                         }`}
                       >
@@ -655,21 +662,27 @@ export default function ProfilePage() {
                           </div>
                           <div className="flex gap-2 ml-4">
                             {!notification.isRead && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleMarkAsRead(notification.id)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Check className="w-4 h-4" />
-                              </Button>
-                            )}
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteNotification(notification.id)}
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMarkAsRead(notification.id);
+                              }}
+                              className="h-8 w-8 p-0"
                             >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteNotification(notification.id);
+                            }}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                          >
                               <X className="w-4 h-4" />
                             </Button>
                           </div>

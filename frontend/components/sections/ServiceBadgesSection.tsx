@@ -17,29 +17,31 @@ export const ServiceBadgesSection = ({
   if (!serviceTitle) return <></>;
 
   return (
-    <div className="mb-8">
-      {/* Main Service Title Badge - Dark Green */}
-      <ServiceBadge
-        variant="primary"
-        label="Servicio"
-        value={serviceTitle}
-        className="mb-4"
-      />
+    <div className="mb-4">
+      {/* Main Service Title Badge and Sub-badges - Inline */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Main Service Title Badge - Dark Green */}
+        <ServiceBadge
+          variant="primary"
+          label="Servicio"
+          value={serviceTitle}
+        />
 
-      {/* Sub-badges - Light Green */}
-      {subBadges.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
-          {subBadges.map((badge, index) => (
-            <ServiceBadge
-              key={badge.id || index}
-              variant="secondary"
-              value={badge.name}
-              icon={badge.iconUrl}
-              iconSize="small"
-            />
-          ))}
-        </div>
-      )}
+        {/* Sub-badges - Light Green */}
+        {subBadges.length > 0 && (
+          <>
+            {subBadges.map((badge, index) => (
+              <ServiceBadge
+                key={badge.id || index}
+                variant="secondary"
+                value={badge.name}
+                icon={badge.iconUrl}
+                iconSize="small"
+              />
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
 };

@@ -211,6 +211,8 @@ export const AdminDateRangePicker = ({
                   size="sm"
                   onClick={(e) => { e.stopPropagation(); handleClear(); }}
                   className="w-10 h-10 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-all duration-150 hover:scale-105 calendar-button"
+                  aria-label="Limpiar selección"
+                  title="Limpiar selección"
                 >
                   <X className="w-5 h-5" />
                 </Button>
@@ -220,6 +222,8 @@ export const AdminDateRangePicker = ({
                   onClick={(e) => { e.stopPropagation(); handleConfirm(); }}
                   disabled={!tempStartDate || !tempEndDate}
                   className="w-10 h-10 bg-verdeprimario-100 text-white rounded-full hover:bg-verdeprimario-100/90 transition-all duration-150 hover:scale-105 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed calendar-button"
+                  aria-label="Confirmar fechas"
+                  title="Confirmar fechas"
                 >
                   <Check className="w-5 h-5" />
                 </Button>
@@ -234,6 +238,8 @@ export const AdminDateRangePicker = ({
                     type="button"
                     onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
                     className="p-2 hover:bg-gray-100 rounded-full transition-all duration-150 hover:scale-110 calendar-nav"
+                    aria-label="Mes anterior"
+                    title="Mes anterior"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -242,6 +248,8 @@ export const AdminDateRangePicker = ({
                     type="button"
                     onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
                     className="p-2 hover:bg-gray-100 rounded-full transition-all duration-150 hover:scale-110 calendar-nav"
+                    aria-label="Mes siguiente"
+                    title="Mes siguiente"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>

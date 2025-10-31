@@ -123,7 +123,7 @@ export default function ServiceDetailsPage(): JSX.Element {
                 }}
                 className="w-[213px] h-[35px] bg-naranja-100 hover:bg-naranja-100/90 rounded-[50px] mt-4 h-auto px-[37px] py-2"
               >
-                <span className="font-raleway-bold-16pt text-blanco-100">Schedule Request</span>
+                <span className="font-raleway-bold-16pt text-blanco-100">Solicitar Horario</span>
               </Button>
             </div>
           </div>
