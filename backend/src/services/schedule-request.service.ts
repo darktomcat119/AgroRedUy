@@ -78,7 +78,8 @@ export class ScheduleRequestService {
         type: NotificationType.SCHEDULE_REQUEST,
         title: 'Nueva solicitud de horario',
         message: `${scheduleRequest.user.firstName} ${scheduleRequest.user.lastName} ha solicitado horario para el servicio "${service.title}"`,
-        relatedId: scheduleRequest.id
+        relatedId: scheduleRequest.id,
+        serviceId: data.serviceId
       });
 
       // Create notification for requester
@@ -87,7 +88,8 @@ export class ScheduleRequestService {
         type: NotificationType.SCHEDULE_REQUEST,
         title: 'Solicitud de horario enviada',
         message: `Tu solicitud de horario para "${service.title}" ha sido enviada`,
-        relatedId: scheduleRequest.id
+        relatedId: scheduleRequest.id,
+        serviceId: data.serviceId
       });
 
       logger.info(`Schedule request created: ${scheduleRequest.id}`);
@@ -238,7 +240,8 @@ export class ScheduleRequestService {
         type: NotificationType.SCHEDULE_ACCEPTED,
         title: 'Solicitud de horario aceptada',
         message: `Tu solicitud de horario para "${request.service.title}" ha sido aceptada. Puedes contactar al contratista.`,
-        relatedId: requestId
+        relatedId: requestId,
+        serviceId: request.serviceId
       });
 
       logger.info(`Schedule request accepted: ${requestId}`);
@@ -291,7 +294,8 @@ export class ScheduleRequestService {
         type: NotificationType.SCHEDULE_REJECTED,
         title: 'Solicitud de horario rechazada',
         message: `Tu solicitud de horario para "${request.service.title}" ha sido rechazada.${reason ? ` Razón: ${reason}` : ''}`,
-        relatedId: requestId
+        relatedId: requestId,
+        serviceId: request.serviceId
       });
 
       logger.info(`Schedule request rejected: ${requestId}`);

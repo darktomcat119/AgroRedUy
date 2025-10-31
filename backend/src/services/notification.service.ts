@@ -21,6 +21,7 @@ export interface CreateNotificationData {
   title: string;
   message: string;
   relatedId?: string;
+  serviceId?: string; // Service ID for navigation to service page
 }
 
 export class NotificationService {
@@ -36,6 +37,7 @@ export class NotificationService {
           title: data.title,
           message: data.message,
           relatedId: data.relatedId || null,
+          serviceId: data.serviceId || null,
           isRead: false
         }
       });
