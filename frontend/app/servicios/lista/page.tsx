@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DynamicNavigation } from "@/components/DynamicNavigation";
 import { apiClient } from "@/lib/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ServiceSearchSection } from "@/components/sections/ServiceSearchSection";
 
 interface PublicServiceItem {
@@ -38,6 +38,7 @@ const authItems = [
 
 export default function ServiciosListaPage(): JSX.Element {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [services, setServices] = useState<PublicServiceItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isFetchingMore, setIsFetchingMore] = useState<boolean>(false);
@@ -47,9 +48,30 @@ export default function ServiciosListaPage(): JSX.Element {
   const requestedPagesRef = useRef<Set<number>>(new Set([1]));
   const limit = 12;
 
+  // Initialize filters from query params
+  const initialCategoryId = searchParams.get('categoryId') || 'all';
+  const initialArea = searchParams.get('area') || 'all';
+  const initialFrom = searchParams.get('startDate') ? new Date(searchParams.get('startDate') as string) : null;
+  const initialTo = searchParams.get('endDate') ? new Date(searchParams.get('endDate') as string) : null;
+
+  // Filters
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(initialCategoryId);
+  const [selectedArea, setSelectedArea] = useState<string>(initialArea);
+  const [startDate, setStartDate] = useState<Date | null>(initialFrom);
+  const [endDate, setEndDate] = useState<Date | null>(initialTo);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [areas, setAreas] = useState<string[]>([]);
+
   async function loadPage(nextPage: number) {
     try {
-      const res: any = await apiClient.getServices({ page: nextPage, limit });
+      const res: any = await apiClient.getServices({
+        page: nextPage,
+        limit,
+        categoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
+        area: selectedArea !== 'all' ? selectedArea : undefined,
+        startDate: startDate ? startDate.toISOString() : undefined,
+        endDate: endDate ? endDate.toISOString() : undefined,
+      });
       let items: PublicServiceItem[] = [];
       let totalPages: number | undefined;
       let total: number | undefined;
@@ -92,19 +114,69 @@ export default function ServiciosListaPage(): JSX.Element {
         setHasMore(items.length === limit);
       }
       setPage(nextPage);
+
+      // Accumulate area options from the fetched items
+      const newAreaSet = new Set<string>();
+      for (const it of items) {
+        if ((it as any).department) newAreaSet.add((it as any).department as any);
+        if ((it as any).city) newAreaSet.add((it as any).city as any);
+      }
+      if (newAreaSet.size > 0) {
+        setAreas(prev => Array.from(new Set([...prev, ...Array.from(newAreaSet).filter(Boolean)])));
+      }
     } catch {
       setHasMore(false);
     }
   }
 
+  // Initial load and refetch when filters change
   useEffect(() => {
+    let isMounted = true;
     (async () => {
       try {
-        await loadPage(1);
+        if (isMounted) {
+          setLoading(true);
+          setServices([]);
+          setPage(1);
+          requestedPagesRef.current = new Set([1]);
+          await loadPage(1);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     })();
+    return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategoryId, selectedArea, startDate, endDate]);
+
+  // Derive category options from loaded services
+  useEffect(() => {
+    const catMap = new Map<string, string>();
+    for (const s of services) {
+      if ((s as any).category?.id) catMap.set((s as any).category.id, (s as any).category.name || '');
+    }
+    // Only update categories from services if we haven't fetched from backend yet
+    setCategories(prev => prev.length > 0 ? prev : Array.from(catMap.entries()).map(([id, name]) => ({ id, name })));
+  }, [services]);
+
+  // Fetch categories from backend to populate the Services filter
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp: any = await apiClient.getCategories();
+        if (cancelled) return;
+        if (resp?.success && Array.isArray(resp.data)) {
+          const fetched = (resp.data as any[]).map(c => ({ id: c.id, name: c.name }));
+          setCategories(fetched);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Infinite scroll handler on list container
@@ -144,7 +216,26 @@ export default function ServiciosListaPage(): JSX.Element {
       <main className="flex-1 w-full py-8 relative">
         {/* Centered Search Bar */}
         <div className="w-full flex justify-center mb-8">
-          <ServiceSearchSection />
+          <ServiceSearchSection
+            categories={categories}
+            areas={areas}
+            onSearch={({ categoryId, area, startDate, endDate }) => {
+              setSelectedCategoryId(categoryId ?? 'all');
+              setSelectedArea(area ?? 'all');
+              setStartDate(startDate ?? null);
+              setEndDate(endDate ?? null);
+              const params = new URLSearchParams();
+              if (categoryId && categoryId !== 'all') params.set('categoryId', categoryId);
+              if (area && area !== 'all') params.set('area', area);
+              if (startDate) params.set('startDate', startDate.toISOString());
+              if (endDate) params.set('endDate', endDate.toISOString());
+              router.replace(`/servicios/lista${params.toString() ? `?${params.toString()}` : ''}`);
+            }}
+            initialCategoryId={initialCategoryId}
+            initialArea={initialArea}
+            initialStartDate={initialFrom}
+            initialEndDate={initialTo}
+          />
         </div>
         {/* removed legacy badges/filter row */}
         {/* Section Title */}

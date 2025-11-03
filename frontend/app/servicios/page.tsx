@@ -1,4 +1,5 @@
-import React from "react";
+"use client";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DynamicNavigation } from "@/components/DynamicNavigation";
@@ -7,6 +8,8 @@ import { ServiceDetailsCard } from "@/components/sections/ServiceDetailsCard";
 import { ImageGallerySection } from "@/components/sections/ImageGallerySection";
 import { LocationBadgesSection } from "@/components/sections/LocationBadgesSection";
 import { CalendarSection } from "@/components/sections/CalendarSection";
+import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/api";
 
 const cropBadges = [
   {
@@ -39,6 +42,45 @@ const navigationItems = [
 // Note: DynamicNavigation generates rightItems automatically based on auth state
 
 export default function ServiciosPage(): JSX.Element {
+  const router = useRouter();
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [areas, setAreas] = useState<string[]>([]);
+
+  // Fetch categories for the search dropdown
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp: any = await apiClient.getCategories();
+        if (cancelled) return;
+        if (resp?.success && Array.isArray(resp.data)) {
+          const fetched = (resp.data as any[]).map(c => ({ id: c.id, name: c.name }));
+          setCategories(fetched);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Handle search - navigate to list page with query params
+  const handleSearch = ({ categoryId, area, startDate, endDate }: {
+    categoryId?: string;
+    area?: string;
+    startDate?: Date | null;
+    endDate?: Date | null;
+  }) => {
+    const params = new URLSearchParams();
+    if (categoryId && categoryId !== 'all') params.set('categoryId', categoryId);
+    if (area && area !== 'all') params.set('area', area);
+    if (startDate) params.set('startDate', startDate.toISOString());
+    if (endDate) params.set('endDate', endDate.toISOString());
+    
+    // Navigate to servicios/lista with query params
+    router.push(`/servicios/lista${params.toString() ? `?${params.toString()}` : ''}`);
+  };
+
   return (
     <div className="bg-grisprimario-100 w-full min-h-screen flex flex-col">
       <DynamicNavigation
@@ -49,7 +91,11 @@ export default function ServiciosPage(): JSX.Element {
       <main className="flex-1 w-full py-8">
         {/* Centered Search Bar */}
         <div className="w-full flex justify-center mb-8">
-          <ServiceSearchSection />
+          <ServiceSearchSection
+            categories={categories}
+            areas={areas}
+            onSearch={handleSearch}
+          />
         </div>
 
         {/* Service Details and Calendar - Side by Side */}
