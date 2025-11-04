@@ -92,23 +92,43 @@ async function main() {
 
   console.log('✅ Categories created:', categories.length);
 
-  // Create admin user
-  const adminPassword = await bcrypt.hash('admin123', 12);
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@agrored.uy' },
-    update: {},
+  // Create superadmin user
+  // You can customize these values or use environment variables
+  const superAdminEmail = process.env.SUPERADMIN_EMAIL || 'admin@agrored.uy';
+  const superAdminPassword = process.env.SUPERADMIN_PASSWORD || 'admin123';
+  const superAdminFirstName = process.env.SUPERADMIN_FIRST_NAME || 'Super';
+  const superAdminLastName = process.env.SUPERADMIN_LAST_NAME || 'Admin';
+  const superAdminPhone = process.env.SUPERADMIN_PHONE || '+59899123456';
+
+  const superAdminPasswordHash = await bcrypt.hash(superAdminPassword, 12);
+  const superAdmin = await prisma.user.upsert({
+    where: { email: superAdminEmail },
+    update: {
+      // Update password if it's different (useful for password changes)
+      passwordHash: superAdminPasswordHash,
+      firstName: superAdminFirstName,
+      lastName: superAdminLastName,
+      phone: superAdminPhone,
+      role: 'SUPERADMIN',
+      isActive: true,
+      emailVerified: true
+    },
     create: {
-      email: 'admin@agrored.uy',
-      passwordHash: adminPassword,
-      firstName: 'Admin',
-      lastName: 'AgroRedUy',
+      email: superAdminEmail,
+      passwordHash: superAdminPasswordHash,
+      firstName: superAdminFirstName,
+      lastName: superAdminLastName,
+      phone: superAdminPhone,
       role: 'SUPERADMIN',
       isActive: true,
       emailVerified: true
     }
   });
 
-  console.log('✅ Admin user created:', admin.email);
+  console.log('✅ SuperAdmin user created/updated:', superAdmin.email);
+  console.log(`   Email: ${superAdminEmail}`);
+  console.log(`   Password: ${superAdminPassword} (change this after first login!)`);
+  console.log(`   Role: ${superAdmin.role}`);
 
   // Create test user
   const userPassword = await bcrypt.hash('user123', 12);

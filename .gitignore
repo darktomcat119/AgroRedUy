@@ -388,3 +388,4 @@ dev/
 # Markdown files (except README.md)
 *.md
 !README.md
+.vs
