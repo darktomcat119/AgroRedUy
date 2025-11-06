@@ -19,6 +19,12 @@ router.use(authenticateToken);
 router.post('/', scheduleRequestController.createScheduleRequest);
 
 /**
+ * @route GET /schedule-requests/admin/all
+ * @description Get all schedule requests (admin view)
+ */
+router.get('/admin/all', scheduleRequestController.getAllScheduleRequestsForAdmin);
+
+/**
  * @route GET /schedule-requests/service/:serviceId
  * @description Get schedule requests for a service (contractor view)
  */

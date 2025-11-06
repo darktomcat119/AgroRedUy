@@ -12,14 +12,14 @@ const router = Router();
 /**
  * @description Upload avatar image
  */
-router.post('/avatar', authenticateToken, async (req: Request, res: Response) => {
+router.post('/avatar', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const upload = fileService.getMulterConfig().single('avatar');
     
     upload(req, res, async (err) => {
       if (err) {
         logger.error('Multer error:', err);
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: err.message,
           data: null
@@ -27,7 +27,7 @@ router.post('/avatar', authenticateToken, async (req: Request, res: Response) =>
       }
 
       if (!req.file) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: 'No file uploaded',
           data: null
@@ -38,7 +38,7 @@ router.post('/avatar', authenticateToken, async (req: Request, res: Response) =>
       const result = await fileService.uploadAvatar(req.file, userId);
 
       if (!result.success) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: result.error || 'Failed to upload avatar',
           data: null
@@ -51,7 +51,7 @@ router.post('/avatar', authenticateToken, async (req: Request, res: Response) =>
           profileImageUrl: result.url
         });
 
-  res.json({
+  return res.json({
     success: true,
           message: 'Avatar uploaded successfully',
           data: {
@@ -65,7 +65,7 @@ router.post('/avatar', authenticateToken, async (req: Request, res: Response) =>
         // Clean up uploaded file if user update fails
         await fileService.deleteFile(`avatars/${result.filename}`);
         
-        res.status(500).json({
+        return res.status(500).json({
           success: false,
           message: 'Avatar uploaded but failed to update profile',
           data: null
@@ -77,51 +77,48 @@ router.post('/avatar', authenticateToken, async (req: Request, res: Response) =>
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-    data: null
-  });
+      data: null
+    });
   }
 });
 
 /**
  * @description Upload category icon
  */
-router.post('/category-icon', authenticateToken, async (req: Request, res: Response) => {
+router.post('/category-icon', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const upload = fileService.getMulterConfig().single('file');
     
     upload(req, res, async (err) => {
       if (err) {
         logger.error('Multer error:', err);
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: err.message,
           data: null
         });
-        return;
       }
 
       if (!req.file) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: 'No file uploaded',
           data: null
         });
-        return;
       }
 
       const result = await fileService.uploadCategoryIcon(req.file);
 
       if (!result.success) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: result.error || 'Failed to upload category icon',
           data: null
         });
-        return;
       }
 
-  res.json({
-    success: true,
+      return res.json({
+        success: true,
         message: 'Category icon uploaded successfully',
         data: {
           url: result.url,
@@ -129,8 +126,8 @@ router.post('/category-icon', authenticateToken, async (req: Request, res: Respo
           size: result.size,
           mimetype: result.mimetype
         }
-  });
-});
+      });
+    });
   } catch (error) {
     logger.error('Error in category icon upload:', error);
     res.status(500).json({
@@ -144,14 +141,14 @@ router.post('/category-icon', authenticateToken, async (req: Request, res: Respo
 /**
  * @description Upload service image
  */
-router.post('/service', authenticateToken, async (req: Request, res: Response) => {
+router.post('/service', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const upload = fileService.getMulterConfig().single('image');
     
     upload(req, res, async (err) => {
       if (err) {
         logger.error('Multer error:', err);
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: err.message,
           data: null
@@ -159,7 +156,7 @@ router.post('/service', authenticateToken, async (req: Request, res: Response) =
       }
 
       if (!req.file) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: 'No file uploaded',
           data: null
@@ -170,7 +167,7 @@ router.post('/service', authenticateToken, async (req: Request, res: Response) =
       const index = parseInt(req.body.index) || 0;
 
       if (!serviceId) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: 'Service ID is required',
           data: null
@@ -180,7 +177,7 @@ router.post('/service', authenticateToken, async (req: Request, res: Response) =
       const result = await fileService.uploadServiceImage(req.file, serviceId, index);
 
       if (!result.success) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: result.error || 'Failed to upload service image',
           data: null
@@ -198,7 +195,7 @@ router.post('/service', authenticateToken, async (req: Request, res: Response) =
           }
         });
 
-        res.json({
+        return res.json({
           success: true,
           message: 'Service image uploaded successfully',
           data: {
@@ -211,7 +208,7 @@ router.post('/service', authenticateToken, async (req: Request, res: Response) =
       } catch (dbError) {
         logger.error('Failed to create service image record:', dbError);
         // Still return upload success so UI doesn't break, but flag missing DB record
-        res.json({
+        return res.json({
           success: true,
           message: 'Service image uploaded (DB record failed)',
           data: {
@@ -242,21 +239,21 @@ router.get('/info/:filename', authenticateToken, async (req: Request, res: Respo
     const info = await fileService.getFileInfo(filePath);
 
     if (!info.exists) {
-      res.status(404).json({
+      return res.status(404).json({
         success: false,
         message: 'File not found',
         data: null
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'File information retrieved',
       data: info
     });
   } catch (error) {
     logger.error('Error getting file info:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Internal server error',
       data: null
@@ -274,21 +271,21 @@ router.delete('/:filename', authenticateToken, async (req: Request, res: Respons
     const deleted = await fileService.deleteFile(filePath);
 
     if (!deleted) {
-      res.status(404).json({
+      return res.status(404).json({
         success: false,
         message: 'File not found',
         data: null
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'File deleted successfully',
       data: { filename }
     });
   } catch (error) {
     logger.error('Error deleting file:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Internal server error',
       data: null
@@ -304,7 +301,7 @@ router.post('/cleanup', authenticateToken, async (req: Request, res: Response) =
     // Only allow admin users to clean up files
     const user = (req as any).user;
     if (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
-      res.status(403).json({
+      return res.status(403).json({
         success: false,
         message: 'Access denied',
         data: null
@@ -313,14 +310,14 @@ router.post('/cleanup', authenticateToken, async (req: Request, res: Response) =
 
     await fileService.cleanupTempFiles();
 
-  res.json({
+  return res.json({
     success: true,
       message: 'Temporary files cleaned up successfully',
       data: null
     });
   } catch (error) {
     logger.error('Error cleaning up files:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Internal server error',
       data: null

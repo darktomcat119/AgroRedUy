@@ -83,7 +83,12 @@ export class UserService {
         },
       });
 
-      return user;
+      if (!user) return null;
+      
+      return {
+        ...user,
+        interests: user.interests as string[]
+      };
     } catch (error) {
       logger.error('Error in getUserById:', error);
       throw new Error('Failed to retrieve user');
@@ -117,7 +122,12 @@ export class UserService {
         },
       });
 
-      return user;
+      if (!user) return null;
+      
+      return {
+        ...user,
+        interests: user.interests as string[]
+      };
     } catch (error) {
       logger.error('Error in getUserProfile:', error);
       throw new Error('Failed to retrieve user profile');
@@ -202,7 +212,13 @@ export class UserService {
       });
 
       logger.info(`User ${id} updated successfully`);
-      return updatedUser;
+      
+      if (!updatedUser) return null;
+      
+      return {
+        ...updatedUser,
+        interests: updatedUser.interests as string[]
+      };
     } catch (error) {
       logger.error('Error in updateUser:', error);
       if (error instanceof Error) {
@@ -277,7 +293,12 @@ export class UserService {
         },
       });
 
-      return user;
+      if (!user) return null;
+      
+      return {
+        ...user,
+        interests: user.interests as string[]
+      };
     } catch (error) {
       logger.error('Error in getUserByEmail:', error);
       throw new Error('Failed to retrieve user by email');

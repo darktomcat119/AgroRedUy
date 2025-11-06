@@ -55,6 +55,68 @@ export class ScheduleRequestController {
   };
 
   /**
+   * @description Get all schedule requests for admin (optimized single query)
+   */
+  public getAllScheduleRequestsForAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      // Check if user is admin
+      const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+      if (!isAdmin) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Only admins can access this endpoint'
+          }
+        });
+        return;
+      }
+
+      const { status } = req.query;
+
+      // Get all schedule requests with service and user info in one query
+      const requests = await prisma.scheduleRequest.findMany({
+        where: status ? { status: status as ScheduleRequestStatus } : undefined,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true
+            }
+          },
+          service: {
+            select: {
+              id: true,
+              title: true,
+              userId: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      res.json({
+        success: true,
+        data: requests
+      });
+    } catch (error) {
+      logger.error('Error fetching all schedule requests:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'SCHEDULE_REQUESTS_FETCH_ERROR',
+          message: 'Error fetching schedule requests'
+        }
+      });
+    }
+  };
+
+  /**
    * @description Get schedule requests for a service (contractor view)
    */
   public getServiceScheduleRequests = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -79,7 +141,9 @@ export class ScheduleRequestController {
         return;
       }
 
-      if (service.userId !== req.user?.id) {
+      // Allow service owner or admin to view schedule requests
+      const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+      if (service.userId !== req.user?.id && !isAdmin) {
         res.status(403).json({
           success: false,
           error: {
@@ -146,9 +210,10 @@ export class ScheduleRequestController {
   public acceptScheduleRequest = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const serviceOwnerId = req.user?.id as string;
+      const userId = req.user?.id as string;
+      const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
 
-      const request = await scheduleRequestService.acceptScheduleRequest(id, serviceOwnerId);
+      const request = await scheduleRequestService.acceptScheduleRequest(id, userId, isAdmin);
 
       res.json({
         success: true,
@@ -174,10 +239,11 @@ export class ScheduleRequestController {
   public rejectScheduleRequest = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const serviceOwnerId = req.user?.id as string;
+      const userId = req.user?.id as string;
       const { reason } = req.body;
+      const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
 
-      const request = await scheduleRequestService.rejectScheduleRequest(id, serviceOwnerId, reason);
+      const request = await scheduleRequestService.rejectScheduleRequest(id, userId, reason, isAdmin);
 
       res.json({
         success: true,

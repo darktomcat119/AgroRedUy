@@ -183,7 +183,7 @@ export class ScheduleRequestService {
   /**
    * @description Accept a schedule request
    */
-  async acceptScheduleRequest(requestId: string, serviceOwnerId: string) {
+  async acceptScheduleRequest(requestId: string, userId: string, isAdmin: boolean = false) {
     try {
       // Verify ownership
       const request = await prisma.scheduleRequest.findUnique({
@@ -202,7 +202,8 @@ export class ScheduleRequestService {
         throw new Error('Schedule request not found');
       }
 
-      if (request.service.userId !== serviceOwnerId) {
+      // Allow service owner or admin to accept
+      if (request.service.userId !== userId && !isAdmin) {
         throw new Error('Unauthorized to accept this request');
       }
 
@@ -255,7 +256,7 @@ export class ScheduleRequestService {
   /**
    * @description Reject a schedule request
    */
-  async rejectScheduleRequest(requestId: string, serviceOwnerId: string, reason?: string) {
+  async rejectScheduleRequest(requestId: string, userId: string, reason?: string, isAdmin: boolean = false) {
     try {
       // Verify ownership
       const request = await prisma.scheduleRequest.findUnique({
@@ -270,7 +271,8 @@ export class ScheduleRequestService {
         throw new Error('Schedule request not found');
       }
 
-      if (request.service.userId !== serviceOwnerId) {
+      // Allow service owner or admin to reject
+      if (request.service.userId !== userId && !isAdmin) {
         throw new Error('Unauthorized to reject this request');
       }
 

@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seed...');
 
-  // Create categories
+  // Create categories (without icons - admins can upload icons later)
   const categories = await Promise.all([
     prisma.category.upsert({
       where: { name: 'Cosecha' },
@@ -14,7 +14,7 @@ async function main() {
       create: {
         name: 'Cosecha',
         description: 'Servicios de cosecha de cultivos',
-        iconUrl: '/icons/cosecha.svg',
+        iconUrl: null,
         isActive: true
       }
     }),
@@ -24,7 +24,7 @@ async function main() {
       create: {
         name: 'Siembra',
         description: 'Servicios de siembra y plantación',
-        iconUrl: '/icons/siembra.svg',
+        iconUrl: null,
         isActive: true
       }
     }),
@@ -34,7 +34,7 @@ async function main() {
       create: {
         name: 'Fumigación',
         description: 'Servicios de fumigación y control de plagas',
-        iconUrl: '/icons/fumigacion.svg',
+        iconUrl: null,
         isActive: true
       }
     }),
@@ -44,7 +44,7 @@ async function main() {
       create: {
         name: 'Fertilización',
         description: 'Servicios de fertilización y nutrición de cultivos',
-        iconUrl: '/icons/fertilizacion.svg',
+        iconUrl: null,
         isActive: true
       }
     }),
@@ -54,7 +54,7 @@ async function main() {
       create: {
         name: 'Riego',
         description: 'Servicios de riego y manejo del agua',
-        iconUrl: '/icons/riego.svg',
+        iconUrl: null,
         isActive: true
       }
     }),
@@ -64,7 +64,7 @@ async function main() {
       create: {
         name: 'Poda',
         description: 'Servicios de poda y mantenimiento',
-        iconUrl: '/icons/poda.svg',
+        iconUrl: null,
         isActive: true
       }
     }),
@@ -74,7 +74,7 @@ async function main() {
       create: {
         name: 'Labranza',
         description: 'Servicios de labranza y preparación de suelo',
-        iconUrl: '/icons/labranza.svg',
+        iconUrl: null,
         isActive: true
       }
     }),
@@ -84,7 +84,7 @@ async function main() {
       create: {
         name: 'Carga y transporte',
         description: 'Servicios de carga y transporte de productos',
-        iconUrl: '/icons/transporte.svg',
+        iconUrl: null,
         isActive: true
       }
     })
