@@ -723,6 +723,11 @@ class ApiClient {
     });
   }
 
+  async getAllAdminScheduleRequests(status?: string) {
+    const params = status ? `?status=${status}` : '';
+    return this.request<any[]>(`/schedule-requests/admin/all${params}`);
+  }
+
   async getServiceScheduleRequests(serviceId: string, status?: string) {
     const params = status ? `?status=${status}` : '';
     return this.request<any[]>(`/schedule-requests/service/${serviceId}${params}`);

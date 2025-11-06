@@ -101,6 +101,9 @@ export default function AdminUsersPage() {
     profileImageUrl: ''
   });
 
+  // Field-level errors
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login');
@@ -178,6 +181,8 @@ export default function AdminUsersPage() {
   const handleCreateUser = async () => {
     try {
       setConfirmDialog(prev => ({ ...prev, isLoading: true }));
+      // Clear previous field errors
+      setFieldErrors({});
       
       const response = await apiClient.createUser(formData);
       
@@ -187,7 +192,19 @@ export default function AdminUsersPage() {
         resetForm();
         customToast.success(toastMessages.userCreated(`${formData.firstName} ${formData.lastName}`));
       } else {
-        customToast.error(`Error al crear usuario: ${response.error?.message || 'Error desconocido'}`);
+        // Parse validation errors and map to fields
+        if (response.error?.code === 'VALIDATION_ERROR' && response.error?.details) {
+          const errors: Record<string, string> = {};
+          response.error.details.forEach((detail: any) => {
+            if (detail.path) {
+              errors[detail.path] = detail.msg || detail.message;
+            }
+          });
+          setFieldErrors(errors);
+          customToast.error('Por favor corrige los errores en el formulario');
+        } else {
+          customToast.error(`Error al crear usuario: ${response.error?.message || 'Error desconocido'}`);
+        }
       }
     } catch (error: any) {
       customToast.error(`Error al crear usuario: ${error.message || 'Error de conexión'}`);
@@ -213,6 +230,8 @@ export default function AdminUsersPage() {
 
     try {
       setConfirmDialog(prev => ({ ...prev, isLoading: true }));
+      // Clear previous field errors
+      setFieldErrors({});
       
       // Prepare update data, excluding password if it's empty
       const updateData: any = { ...formData };
@@ -230,7 +249,19 @@ export default function AdminUsersPage() {
         resetForm();
         customToast.success(toastMessages.userUpdated(`${formData.firstName} ${formData.lastName}`));
       } else {
-        customToast.error(`Error al actualizar usuario: ${response.error?.message || 'Error desconocido'}`);
+        // Parse validation errors and map to fields
+        if (response.error?.code === 'VALIDATION_ERROR' && response.error?.details) {
+          const errors: Record<string, string> = {};
+          response.error.details.forEach((detail: any) => {
+            if (detail.path) {
+              errors[detail.path] = detail.msg || detail.message;
+            }
+          });
+          setFieldErrors(errors);
+          customToast.error('Por favor corrige los errores en el formulario');
+        } else {
+          customToast.error(`Error al actualizar usuario: ${response.error?.message || 'Error desconocido'}`);
+        }
       }
     } catch (error: any) {
       customToast.error(`Error al actualizar usuario: ${error.message || 'Error de conexión'}`);
@@ -343,6 +374,18 @@ export default function AdminUsersPage() {
       newsletter: false,
       profileImageUrl: ''
     });
+    setFieldErrors({});
+  };
+
+  // Clear error for a specific field when user starts typing
+  const clearFieldError = (fieldName: string) => {
+    if (fieldErrors[fieldName]) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
   };
 
   // Avatar upload handlers
@@ -613,18 +656,30 @@ export default function AdminUsersPage() {
                       <Input
                         id="firstName"
                         value={formData.firstName}
-                        onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                        className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, firstName: e.target.value }));
+                          clearFieldError('firstName');
+                        }}
+                        className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.firstName ? 'border-red-500' : ''}`}
                       />
+                      {fieldErrors.firstName && (
+                        <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.firstName}</p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="lastName" className="text-negro-100 font-raleway-medium-14pt">Apellido</Label>
                       <Input
                         id="lastName"
                         value={formData.lastName}
-                        onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                        className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, lastName: e.target.value }));
+                          clearFieldError('lastName');
+                        }}
+                        className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.lastName ? 'border-red-500' : ''}`}
                       />
+                      {fieldErrors.lastName && (
+                        <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.lastName}</p>
+                      )}
                     </div>
                   </div>
                   
@@ -634,9 +689,15 @@ export default function AdminUsersPage() {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      className="border-grisprimario-10 focus:border-verdeprimario-100"
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, email: e.target.value }));
+                        clearFieldError('email');
+                      }}
+                      className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.email ? 'border-red-500' : ''}`}
                     />
+                    {fieldErrors.email && (
+                      <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.email}</p>
+                    )}
                   </div>
 
                   <div>
@@ -644,9 +705,15 @@ export default function AdminUsersPage() {
                     <Input
                       id="phone"
                       value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      className="border-grisprimario-10 focus:border-verdeprimario-100"
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, phone: e.target.value }));
+                        clearFieldError('phone');
+                      }}
+                      className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.phone ? 'border-red-500' : ''}`}
                     />
+                    {fieldErrors.phone && (
+                      <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.phone}</p>
+                    )}
                   </div>
 
                   <div>
@@ -655,9 +722,15 @@ export default function AdminUsersPage() {
                       id="password"
                       type="password"
                       value={formData.password}
-                      onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                      className="border-grisprimario-10 focus:border-verdeprimario-100"
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, password: e.target.value }));
+                        clearFieldError('password');
+                      }}
+                      className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.password ? 'border-red-500' : ''}`}
                     />
+                    {fieldErrors.password && (
+                      <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.password}</p>
+                    )}
                   </div>
 
                   <div>
@@ -704,20 +777,32 @@ export default function AdminUsersPage() {
                         <Input
                           id="city"
                           value={formData.city}
-                          onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                          className="border-grisprimario-10 focus:border-verdeprimario-100"
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, city: e.target.value }));
+                            clearFieldError('city');
+                          }}
+                          className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.city ? 'border-red-500' : ''}`}
                           placeholder="Ej: Montevideo"
                         />
+                        {fieldErrors.city && (
+                          <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.city}</p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="department" className="text-negro-100 font-raleway-medium-14pt">Departamento</Label>
                         <Input
                           id="department"
                           value={formData.department}
-                          onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-                          className="border-grisprimario-10 focus:border-verdeprimario-100"
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, department: e.target.value }));
+                            clearFieldError('department');
+                          }}
+                          className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.department ? 'border-red-500' : ''}`}
                           placeholder="Ej: Montevideo"
                         />
+                        {fieldErrors.department && (
+                          <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.department}</p>
+                        )}
                       </div>
                     </div>
 
@@ -726,10 +811,16 @@ export default function AdminUsersPage() {
                       <Input
                         id="address"
                         value={formData.address}
-                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                        className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, address: e.target.value }));
+                          clearFieldError('address');
+                        }}
+                        className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.address ? 'border-red-500' : ''}`}
                         placeholder="Dirección completa"
                       />
+                      {fieldErrors.address && (
+                        <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.address}</p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -739,14 +830,26 @@ export default function AdminUsersPage() {
                           id="dateOfBirth"
                           type="date"
                           value={formData.dateOfBirth}
-                          onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
-                          className="border-grisprimario-10 focus:border-verdeprimario-100"
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }));
+                            clearFieldError('dateOfBirth');
+                          }}
+                          className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.dateOfBirth ? 'border-red-500' : ''}`}
                         />
+                        {fieldErrors.dateOfBirth && (
+                          <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.dateOfBirth}</p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="gender" className="text-negro-100 font-raleway-medium-14pt">Género</Label>
-                        <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
-                          <SelectTrigger className="border-grisprimario-10 focus:border-verdeprimario-100">
+                        <Select 
+                          value={formData.gender} 
+                          onValueChange={(value) => {
+                            setFormData(prev => ({ ...prev, gender: value }));
+                            clearFieldError('gender');
+                          }}
+                        >
+                          <SelectTrigger className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.gender ? 'border-red-500' : ''}`}>
                             <SelectValue placeholder="Seleccionar género" />
                           </SelectTrigger>
                           <SelectContent>
@@ -755,6 +858,9 @@ export default function AdminUsersPage() {
                             <SelectItem value="OTHER">Otro</SelectItem>
                           </SelectContent>
                         </Select>
+                        {fieldErrors.gender && (
+                          <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.gender}</p>
+                        )}
                       </div>
                     </div>
 
@@ -764,20 +870,32 @@ export default function AdminUsersPage() {
                         <Input
                           id="occupation"
                           value={formData.occupation}
-                          onChange={(e) => setFormData(prev => ({ ...prev, occupation: e.target.value }))}
-                          className="border-grisprimario-10 focus:border-verdeprimario-100"
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, occupation: e.target.value }));
+                            clearFieldError('occupation');
+                          }}
+                          className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.occupation ? 'border-red-500' : ''}`}
                           placeholder="Ej: Ingeniero Agrónomo"
                         />
+                        {fieldErrors.occupation && (
+                          <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.occupation}</p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="company" className="text-negro-100 font-raleway-medium-14pt">Empresa</Label>
                         <Input
                           id="company"
                           value={formData.company}
-                          onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
-                          className="border-grisprimario-10 focus:border-verdeprimario-100"
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, company: e.target.value }));
+                            clearFieldError('company');
+                          }}
+                          className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.company ? 'border-red-500' : ''}`}
                           placeholder="Nombre de la empresa"
                         />
+                        {fieldErrors.company && (
+                          <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.company}</p>
+                        )}
                       </div>
                     </div>
 
@@ -786,11 +904,17 @@ export default function AdminUsersPage() {
                       <Textarea
                         id="interests"
                         value={formData.interests}
-                        onChange={(e) => setFormData(prev => ({ ...prev, interests: e.target.value }))}
-                        className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, interests: e.target.value }));
+                          clearFieldError('interests');
+                        }}
+                        className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.interests ? 'border-red-500' : ''}`}
                         placeholder="Describe los intereses del usuario..."
                         rows={3}
                       />
+                      {fieldErrors.interests && (
+                        <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.interests}</p>
+                      )}
                     </div>
 
                     <div className="flex items-center space-x-2">
@@ -1008,18 +1132,30 @@ export default function AdminUsersPage() {
                   <Input
                     id="edit-firstName"
                     value={formData.firstName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                    className="border-grisprimario-10 focus:border-verdeprimario-100"
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, firstName: e.target.value }));
+                      clearFieldError('firstName');
+                    }}
+                    className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.firstName ? 'border-red-500' : ''}`}
                   />
+                  {fieldErrors.firstName && (
+                    <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.firstName}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="edit-lastName" className="text-negro-100 font-raleway-medium-14pt">Apellido</Label>
                   <Input
                     id="edit-lastName"
                     value={formData.lastName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                    className="border-grisprimario-10 focus:border-verdeprimario-100"
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, lastName: e.target.value }));
+                      clearFieldError('lastName');
+                    }}
+                    className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.lastName ? 'border-red-500' : ''}`}
                   />
+                  {fieldErrors.lastName && (
+                    <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.lastName}</p>
+                  )}
                 </div>
               </div>
               
@@ -1029,9 +1165,15 @@ export default function AdminUsersPage() {
                   id="edit-email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  className="border-grisprimario-10 focus:border-verdeprimario-100"
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, email: e.target.value }));
+                    clearFieldError('email');
+                  }}
+                  className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.email ? 'border-red-500' : ''}`}
                 />
+                {fieldErrors.email && (
+                  <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.email}</p>
+                )}
               </div>
 
               <div>
@@ -1039,9 +1181,15 @@ export default function AdminUsersPage() {
                 <Input
                   id="edit-phone"
                   value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                  className="border-grisprimario-10 focus:border-verdeprimario-100"
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, phone: e.target.value }));
+                    clearFieldError('phone');
+                  }}
+                  className={`border-grisprimario-10 focus:border-verdeprimario-100 ${fieldErrors.phone ? 'border-red-500' : ''}`}
                 />
+                {fieldErrors.phone && (
+                  <p className="text-red-500 text-sm mt-1 font-raleway-regular-12pt">{fieldErrors.phone}</p>
+                )}
               </div>
 
               {/* Additional User Information */}

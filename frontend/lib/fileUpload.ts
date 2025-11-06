@@ -24,7 +24,9 @@ export class FileUploadService {
   private allowedTypes: string[];
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    // Remove /api/v1 suffix if present, since we'll add it in each method
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+    this.baseUrl = apiUrl.replace(/\/api\/v1$/, '');
     this.maxFileSize = 5 * 1024 * 1024; // 5MB
     this.allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
   }

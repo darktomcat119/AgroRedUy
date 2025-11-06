@@ -68,29 +68,17 @@ export default function AdminScheduleRequestsPage() {
   const loadRequests = async () => {
     try {
       setLoading(true);
-      // Get all services owned by the admin
-      const servicesResp = await apiClient.getAdminServices({ page: 1, limit: 100 });
-      if (!servicesResp.success || !servicesResp.data) return;
-
-      const services = (servicesResp.data as any).services || [];
-      const allRequests: ScheduleRequest[] = [];
-
-      // Fetch requests for each service
-      for (const service of services) {
-        try {
-          const resp = await apiClient.getServiceScheduleRequests(service.id, statusFilter !== "all" ? statusFilter : undefined);
-          if (resp.success && resp.data) {
-            allRequests.push(...(resp.data as ScheduleRequest[]));
-          }
-        } catch (error) {
-          console.error(`Error loading requests for service ${service.id}:`, error);
-        }
+      // Optimized: Get all schedule requests in a single API call
+      const resp = await apiClient.getAllAdminScheduleRequests(
+        statusFilter !== "all" ? statusFilter : undefined
+      );
+      
+      if (resp.success && resp.data) {
+        setRequests(resp.data as ScheduleRequest[]);
+      } else {
+        console.error("Failed to load schedule requests:", resp.error);
+        toast.error("Error al cargar solicitudes de horario");
       }
-
-      // Sort by creation date (newest first)
-      allRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-      setRequests(allRequests);
     } catch (error) {
       console.error("Error loading schedule requests:", error);
       toast.error("Error al cargar solicitudes de horario");

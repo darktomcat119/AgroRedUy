@@ -21,6 +21,8 @@ export default function ServiceDetailsPage(): JSX.Element {
 
   const [loading, setLoading] = useState(true);
   const [service, setService] = useState<any | null>(null);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [areas, setAreas] = useState<string[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -36,9 +38,45 @@ export default function ServiceDetailsPage(): JSX.Element {
     return () => { active = false; };
   }, [id]);
 
+  // Load categories and areas for search
+  useEffect(() => {
+    let active = true;
+    const loadSearchData = async () => {
+      try {
+        // Load categories
+        const catResp = await apiClient.getCategories();
+        if (active && catResp.success && catResp.data) {
+          setCategories(catResp.data);
+        }
+        
+        // Load initial services to get areas
+        const servResp = await apiClient.getServices({ page: 1, limit: 100 });
+        if (active && servResp.success && servResp.data) {
+          const items = Array.isArray(servResp.data?.services) 
+            ? servResp.data.services 
+            : Array.isArray(servResp.data?.data) 
+              ? servResp.data.data 
+              : [];
+          const areaSet = new Set<string>();
+          items.forEach((item: any) => {
+            if (item.department) areaSet.add(item.department);
+            if (item.city) areaSet.add(item.city);
+          });
+          setAreas(Array.from(areaSet));
+        }
+      } catch (error) {
+        console.error("Error loading search data:", error);
+      }
+    };
+    loadSearchData();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const navigationItems = [
     { label: 'Inicio', href: '/' },
-    { label: 'Servicios', href: '/services/list' },
+    { label: 'Servicios', href: '/servicios/lista' },
   ];
   // Note: DynamicNavigation generates rightItems automatically based on auth state
 
@@ -55,13 +93,15 @@ export default function ServiceDetailsPage(): JSX.Element {
       <main className="flex-1 w-full py-8">
         <div className="w-full flex justify-center mb-8">
           <ServiceSearchSection
+            categories={categories}
+            areas={areas}
             onSearch={({ categoryId, area, startDate, endDate }) => {
               const params = new URLSearchParams();
               if (categoryId && categoryId !== 'all') params.set('categoryId', categoryId);
               if (area && area !== 'all') params.set('area', area);
               if (startDate) params.set('startDate', startDate.toISOString());
               if (endDate) params.set('endDate', endDate.toISOString());
-              (router as any).push(`/services/list${params.toString() ? `?${params.toString()}` : ''}`);
+              router.push(`/servicios/lista${params.toString() ? `?${params.toString()}` : ''}`);
             }}
           />
         </div>

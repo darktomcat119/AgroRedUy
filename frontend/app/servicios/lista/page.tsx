@@ -28,7 +28,7 @@ const buttonPositions = [
 
 const navigationItems = [
   { label: "Inicio", href: "/" },
-  { label: "Servicios", href: "/services/list" },
+  { label: "Servicios", href: "/servicios/lista" },
 ];
 
 const authItems = [
@@ -295,7 +295,7 @@ export default function ServiciosListaPage(): JSX.Element {
                     {/* CTA */}
                     <Button
                       className="w-[240px] h-[35px] bg-naranja-100 shadow-[0px_6px_10px_rgba(0,0,0,0.25)] rounded-[50px] hover:bg-naranja-100/90 -mt-4 mx-auto"
-                      onClick={() => router.push(`/services/${service.id}`)}
+                      onClick={() => router.push(`/servicios/${service.id}`)}
                     >
                       <span className="font-raleway-bold-16pt text-blanco-100 text-[16px]">
                     Ver disponibilidad
