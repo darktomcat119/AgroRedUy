@@ -93,7 +93,8 @@ export default function AdminSecurityPage() {
       });
       
       if (response.success && response.data) {
-        const logs = response.data.logs || [];
+        const data: any = response.data;
+        const logs = data.logs || data.data || [];
         
         // Transform logs to SecurityEvent format
         const events: SecurityEvent[] = logs.map((log: any) => ({
@@ -113,10 +114,11 @@ export default function AdminSecurityPage() {
         setSecurityEvents(events);
         
         // Calculate stats from response
+        const summary: any = data.summary || {};
         const stats: SecurityStats = {
-          totalEvents: response.data.summary?.totalLogs || 0,
-          criticalEvents: response.data.summary?.criticalLogs || 0,
-          highEvents: response.data.summary?.warningLogs || 0,
+          totalEvents: summary.totalLogs || 0,
+          criticalEvents: summary.criticalLogs || 0,
+          highEvents: summary.warningLogs || 0,
           mediumEvents: 0,
           lowEvents: 0,
           failedLogins: events.filter(e => e.type === 'failed_login').length,

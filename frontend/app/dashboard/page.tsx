@@ -119,7 +119,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {user.role === 'CONTRACTOR' && (
+          {user?.role === 'CONTRACTOR' && (
             <>
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
@@ -153,7 +153,7 @@ export default function DashboardPage() {
             </>
           )}
 
-          {user.role === 'ADMIN' && (
+          {user?.role === 'ADMIN' && (
             <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">

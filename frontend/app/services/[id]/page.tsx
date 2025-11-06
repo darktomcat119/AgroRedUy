@@ -73,10 +73,11 @@ export default function ServiceDetailsPage(): JSX.Element {
         // Load initial services to get areas
         const servResp = await apiClient.getServices({ page: 1, limit: 100 });
         if (active && servResp.success && servResp.data) {
-          const items = Array.isArray(servResp.data?.services) 
-            ? servResp.data.services 
-            : Array.isArray(servResp.data?.data) 
-              ? servResp.data.data 
+          const data: any = servResp.data;
+          const items = Array.isArray(data.services) 
+            ? data.services 
+            : Array.isArray(data.data) 
+              ? data.data 
               : [];
           const areaSet = new Set<string>();
           items.forEach((item: any) => {
