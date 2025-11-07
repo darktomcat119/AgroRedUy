@@ -139,7 +139,7 @@ export class FileService {
       const ext = path.extname(file.originalname);
       const filename = `avatar-${userId}-${Date.now()}${ext}`;
       const outputPath = path.join(this.uploadDir, 'avatars', filename);
-      const url = `${process.env.API_URL || 'http://localhost:3001'}/uploads/avatars/${filename}`;
+      const url = `${process.env.API_URL || 'http://localhost:3003'}/uploads/avatars/${filename}`;
 
       // Process the image (resize to 400x400)
       await this.processImage(tempPath, outputPath, {
@@ -202,7 +202,7 @@ export class FileService {
       const ext = path.extname(file.originalname);
       const filename = `category-icon-${Date.now()}${ext}`;
       const outputPath = path.join(this.uploadDir, 'category-icons', filename);
-      const url = `${process.env.API_URL || 'http://localhost:3001'}/uploads/category-icons/${filename}`;
+      const url = `${process.env.API_URL || 'http://localhost:3003'}/uploads/category-icons/${filename}`;
 
       // Check if it's an SVG file
       if (ext.toLowerCase() === '.svg') {

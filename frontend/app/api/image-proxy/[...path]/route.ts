@@ -7,7 +7,7 @@ export async function GET(
   try {
     const imagePath = params.path.join('/');
     // Use NEXT_PUBLIC_API_URL without /api/v1 suffix, or BACKEND_URL, or fallback to localhost
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'http://localhost:3001';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'http://localhost:3003';
     const backendUrl = apiUrl.replace('/api/v1', ''); // Remove /api/v1 if present
     const imageUrl = `${backendUrl}/uploads/${imagePath}`;
     

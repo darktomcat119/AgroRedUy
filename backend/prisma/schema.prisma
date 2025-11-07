@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -21,14 +21,14 @@ model User {
   provider                 String?
   providerId               String?          @map("provider_id")
   providerData             Json?            @map("provider_data")
-  address                  String?
+  address                  String[]
   city                     String?
   department               String?
   dateOfBirth              DateTime?        @map("date_of_birth")
   gender                   String?
   occupation               String?
   company                  String?
-  interests                Json?
+  interests                String[]         @default([])
   newsletter               Boolean          @default(false)
   emailVerificationToken   String?          @map("email_verification_token")
   emailVerificationExpires DateTime?        @map("email_verification_expires")

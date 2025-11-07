@@ -31,7 +31,7 @@ npm install
 if [ ! -f .env.local ]; then
     echo "📝 Creating environment file..."
     cat > .env.local << EOF
-NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+NEXT_PUBLIC_API_URL=http://localhost:3003/api/v1
 NEXT_PUBLIC_MAP_API_KEY=your-map-api-key
 EOF
     echo "⚠️  Please edit .env.local file with your API URL and map API key"

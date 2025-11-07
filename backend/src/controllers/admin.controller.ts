@@ -242,7 +242,7 @@ export class AdminController {
         profileImageUrl: user.profileImageUrl 
           ? (user.profileImageUrl.startsWith('http') 
               ? user.profileImageUrl 
-              : `${process.env.API_URL || 'http://localhost:3001'}${user.profileImageUrl}`)
+              : `${process.env.API_URL || 'http://localhost:3003'}${user.profileImageUrl}`)
           : null
       }));
 

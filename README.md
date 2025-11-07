@@ -247,3 +247,4 @@ For issues and questions:
 
 **Built with ❤️ for the Uruguayan agricultural community**
 
+

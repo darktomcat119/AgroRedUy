@@ -69,7 +69,7 @@ export default function LoginPage(): JSX.Element {
   const handleOAuthLogin = async (provider: string) => {
     try {
       // Check if OAuth is available
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
       const response = await fetch(`${backendUrl}/api/v1/oauth/status`);
       const data = await response.json();
       

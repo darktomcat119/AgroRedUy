@@ -13,7 +13,7 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     // Resolve absolute or relative URLs against a configured backend base
-    const configuredBase = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_HOST || 'http://localhost:3001';
+    const configuredBase = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_HOST || 'http://localhost:3003';
     let configuredHost = '';
     try {
       configuredHost = new URL(configuredBase).host;
@@ -23,6 +23,8 @@ export async function GET(request: Request): Promise<Response> {
 
     const allowedHosts = new Set<string>([
       'localhost:3001',
+      'localhost:3002',
+      'localhost:3003',
       configuredHost
     ].filter(Boolean));
 

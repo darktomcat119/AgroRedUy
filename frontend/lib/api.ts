@@ -3,7 +3,7 @@
  * Handles all API communication with the backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api/v1';
 
 export interface ApiResponse<T = any> {
   success: boolean;

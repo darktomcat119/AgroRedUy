@@ -49,7 +49,7 @@ app.use(helmet({
         "https:",
         "http://localhost:5173",
         "http://localhost:3000",
-        "http://localhost:3001"
+        "http://localhost:3003"
       ],
     },
   },
@@ -61,7 +61,7 @@ app.use(helmet({
 const corsOptions = {
   origin: process.env['NODE_ENV'] === 'production' 
     ? [process.env['CORS_ORIGIN'] || 'https://agrored.uy']
-    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'],
+    : ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:5173'],
   credentials: true,
   optionsSuccessStatus: 200,
 };

@@ -10,7 +10,7 @@ const nextConfig = {
       {
         protocol: 'http',
         hostname: 'localhost',
-        port: '3001',
+        port: '3003',
         pathname: '/uploads/**',
       },
       {
@@ -23,7 +23,7 @@ const nextConfig = {
 
   // Environment variables that should be available on the client
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api/v1',
   },
 };
 

@@ -43,4 +43,8 @@ next-env.d.ts
 
 # OS
 Thumbs.db
-
+public.rar
+setup.bat
+setup.sh
+frontend.zip
+.env

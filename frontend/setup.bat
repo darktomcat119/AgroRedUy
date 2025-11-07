@@ -23,7 +23,7 @@ call npm install
 REM Create environment file if it doesn't exist
 if not exist .env.local (
     echo 📝 Creating environment file...
-    echo NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1 > .env.local
+    echo NEXT_PUBLIC_API_URL=http://localhost:3003/api/v1 > .env.local
     echo NEXT_PUBLIC_MAP_API_KEY=your-map-api-key >> .env.local
     echo ⚠️  Please edit .env.local file with your API URL and map API key
 )

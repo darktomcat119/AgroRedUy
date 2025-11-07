@@ -34,7 +34,7 @@ export interface UserProfile {
   isActive: boolean;
   emailVerified: boolean;
   profileImageUrl?: string;
-  address?: string;
+  address?: string[];
   city?: string;
   department?: string;
   dateOfBirth?: Date;
