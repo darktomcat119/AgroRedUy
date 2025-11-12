@@ -130,6 +130,7 @@ export default function AdminServicesPage() {
   const [units, setUnits] = useState<Array<{ id: string; name: string; symbol: string }>>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [mapZoom, setMapZoom] = useState<number>(formData.mapZoom);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [editImageFiles, setEditImageFiles] = useState<File[]>([]);
   const [editImagePreviews, setEditImagePreviews] = useState<string[]>([]);
   const [editExistingImages, setEditExistingImages] = useState<Array<{ id: string; imageUrl: string }>>([]);
@@ -266,9 +267,18 @@ export default function AdminServicesPage() {
   const loadUnits = async () => {
     try {
       const res = await apiClient.getUnits();
-      if ((res as any).success && (res as any).data) setUnits((res as any).data);
+      if ((res as any).success && (res as any).data) {
+        const unitsData = (res as any).data;
+        setUnits(unitsData);
+        console.log('Units loaded successfully:', unitsData);
+        console.log('Number of units:', unitsData.length);
+      } else {
+        console.error('Failed to load units - response:', res);
+        toast.error('Error al cargar las unidades');
+      }
     } catch (e) {
       console.error('Error loading units', e);
+      toast.error('Error al cargar las unidades');
     }
   };
 
@@ -342,6 +352,7 @@ export default function AdminServicesPage() {
       // Always include subBadges array, even if empty
       payload.subBadges = subBadges.filter(b => b.name.trim() !== '');
 
+      console.log('Creating service with payload:', JSON.stringify(payload, null, 2));
       const resp = await apiClient.createAdminService(payload);
       if ((resp as any).success && (resp as any).data) {
         const newService = (resp as any).data;
@@ -357,7 +368,26 @@ export default function AdminServicesPage() {
         setIsCreateDialogOpen(false);
         resetForm();
       } else {
-        toast.error((resp as any).error?.message || 'Error al crear servicio');
+        // Display detailed validation errors
+        const error = (resp as any).error;
+        console.log('Service creation error:', error);
+        
+        if (error?.details && Array.isArray(error.details) && error.details.length > 0) {
+          // Build field errors object
+          const errors: Record<string, string> = {};
+          
+          // Show each validation error as a separate toast
+          error.details.forEach((detail: any) => {
+            const field = detail.path || 'Campo';
+            const msg = detail.msg || 'Error de validación';
+            errors[field] = msg;
+            toast.error(`${field}: ${msg}`);
+          });
+          
+          setFieldErrors(errors);
+        } else {
+          toast.error(error?.message || 'Error al crear servicio');
+        }
       }
     } catch (error) {
       toast.error('Error al crear servicio');
@@ -368,9 +398,33 @@ export default function AdminServicesPage() {
   };
 
   const showCreateServiceConfirm = () => {
-    // Validate required fields before showing confirmation
-    if (!formData.title || !formData.categoryId || !formData.unit_id) {
-      toast.error('Complete título, categoría y unidad');
+    // Validate required fields: title, description, category, and date range
+    const missingFields = [];
+    
+    if (!formData.title || formData.title.trim() === '') {
+      missingFields.push('título');
+    }
+    if (!formData.description || formData.description.trim() === '') {
+      missingFields.push('descripción');
+    }
+    if (!formData.categoryId || formData.categoryId.trim() === '') {
+      missingFields.push('categoría');
+    }
+    if (!startDate || !endDate) {
+      missingFields.push('rango de fechas');
+    }
+    
+    if (missingFields.length > 0) {
+      const errorMsg = `Campos requeridos faltantes: ${missingFields.join(', ')}`;
+      toast.error(errorMsg);
+      console.log('Validation failed - Missing fields:', missingFields);
+      console.log('Current formData:', {
+        title: formData.title,
+        description: formData.description,
+        categoryId: formData.categoryId,
+        startDate,
+        endDate
+      });
       return;
     }
     
@@ -417,7 +471,20 @@ export default function AdminServicesPage() {
 
       const resp = await apiClient.updateAdminService(selectedService.id, payload);
       if (!(resp as any).success) {
-        toast.error((resp as any).error?.message || 'Error al actualizar servicio');
+        // Display detailed validation errors
+        const error = (resp as any).error;
+        console.log('Service update error:', error);
+        
+        if (error?.details && Array.isArray(error.details) && error.details.length > 0) {
+          // Show each validation error as a separate toast
+          error.details.forEach((detail: any) => {
+            const field = detail.path || 'Campo';
+            const msg = detail.msg || 'Error de validación';
+            toast.error(`${field}: ${msg}`);
+          });
+        } else {
+          toast.error(error?.message || 'Error al actualizar servicio');
+        }
         return;
       }
 
@@ -546,6 +613,7 @@ export default function AdminServicesPage() {
       radius: 0,
       isActive: true
     });
+    setFieldErrors({}); // Clear validation errors
     setStartDate('');
     setEndDate('');
     setImageFiles([]);
@@ -836,18 +904,21 @@ export default function AdminServicesPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="title" className="text-negro-100 font-raleway-medium-14pt">Título del Servicio</Label>
+                      <Label htmlFor="title" className="text-negro-100 font-raleway-medium-14pt">Título del Servicio *</Label>
                       <Input
                         id="title"
                         value={formData.title}
                         onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                        className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        className={`${!formData.title ? 'border-red-300' : 'border-grisprimario-10'} focus:border-verdeprimario-100`}
                       />
+                      {!formData.title && (
+                        <p className="text-xs text-red-500 mt-1">⚠️ Campo requerido</p>
+                      )}
                     </div>
                     <div>
-                      <Label htmlFor="category" className="text-negro-100 font-raleway-medium-14pt">Categoría</Label>
+                      <Label htmlFor="category" className="text-negro-100 font-raleway-medium-14pt">Categoría *</Label>
                       <Select value={formData.categoryId} onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}>
-                        <SelectTrigger className="border-grisprimario-10 focus:border-verdeprimario-100">
+                        <SelectTrigger className={`${!formData.categoryId ? 'border-red-300' : 'border-grisprimario-10'} focus:border-verdeprimario-100`}>
                           <SelectValue placeholder="Seleccionar categoría" />
                         </SelectTrigger>
                         <SelectContent>
@@ -856,18 +927,30 @@ export default function AdminServicesPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {!formData.categoryId && (
+                        <p className="text-xs text-red-500 mt-1">⚠️ Campo requerido</p>
+                      )}
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <div>
-                        <Label className="text-negro-100 font-raleway-medium-14pt flex items-center gap-2"><Images className="w-4 h-4"/> Imágenes del Servicio</Label>
+                        <Label className="text-negro-100 font-raleway-medium-14pt flex items-center gap-2"><Images className="w-4 h-4"/> Imágenes del Servicio (Opcional)</Label>
                         <MultiImageDropzone files={imageFiles} previews={imagePreviews} onChange={(f,p)=>{setImageFiles(f);setImagePreviews(p);}} className="mt-2" />
                       </div>
                       <div>
-                        <Label htmlFor="description" className="text-negro-100 font-raleway-medium-14pt">Descripción</Label>
-                        <Textarea id="description" value={formData.description} onChange={(e)=> setFormData(prev=>({...prev, description: e.target.value}))} className="border-grisprimario-10 focus:border-verdeprimario-100" rows={6} />
+                        <Label htmlFor="description" className="text-negro-100 font-raleway-medium-14pt">Descripción *</Label>
+                        <Textarea 
+                          id="description" 
+                          value={formData.description} 
+                          onChange={(e)=> setFormData(prev=>({...prev, description: e.target.value}))} 
+                          className={`${!formData.description ? 'border-red-300' : 'border-grisprimario-10'} focus:border-verdeprimario-100`} 
+                          rows={6} 
+                        />
+                        {!formData.description && (
+                          <p className="text-xs text-red-500 mt-1">⚠️ Campo requerido</p>
+                        )}
                       </div>
                       <div>
                         <SubBadgeManager badges={subBadges} onChange={setSubBadges} />
@@ -875,7 +958,7 @@ export default function AdminServicesPage() {
                     </div>
                     <div className="space-y-4">
                       <AdminDateRangePicker
-                        label="Rango de fechas"
+                        label="Rango de fechas *"
                         startDate={startDate}
                         endDate={endDate}
                         onDateChange={(start, end) => {
@@ -883,9 +966,12 @@ export default function AdminServicesPage() {
                           setEndDate(end);
                         }}
                       />
+                      {(!startDate || !endDate) && (
+                        <p className="text-xs text-red-500 mt-1">⚠️ El rango de fechas es requerido</p>
+                      )}
                       <div className="grid grid-cols-3 gap-3">
                         <div>
-                          <Label className="text-negro-100 font-raleway-medium-14pt">Precio</Label>
+                          <Label className="text-negro-100 font-raleway-medium-14pt">Precio (Opcional)</Label>
                           <Input type="number" step="0.01" value={formData.price} onChange={(e)=> setFormData(prev=>({...prev, price: Number(e.target.value)}))} className="border-grisprimario-10 focus:border-verdeprimario-100" />
                         </div>
                         <div>
@@ -899,15 +985,35 @@ export default function AdminServicesPage() {
                           </Select>
                         </div>
                         <div>
-                          <Label className="text-negro-100 font-raleway-medium-14pt">Unidad</Label>
-                          <Select value={formData.unit_id} onValueChange={(v)=> setFormData(prev=>({...prev, unit_id: v}))}>
-                            <SelectTrigger className="border-grisprimario-10 focus:border-verdeprimario-100"><SelectValue placeholder="Unidad" /></SelectTrigger>
+                          <Label className="text-negro-100 font-raleway-medium-14pt">
+                            Unidad (Opcional)
+                            {units.length === 0 && <span className="text-xs text-red-500 ml-2">(Error cargando)</span>}
+                          </Label>
+                          <Select 
+                            value={formData.unit_id} 
+                            onValueChange={(v)=> {
+                              setFormData(prev=>({...prev, unit_id: v}));
+                              if (fieldErrors.unit_id) {
+                                setFieldErrors(prev => ({ ...prev, unit_id: '' }));
+                              }
+                            }}
+                          >
+                            <SelectTrigger className={`${fieldErrors.unit_id ? 'border-red-500' : 'border-grisprimario-10'} focus:border-verdeprimario-100`}>
+                              <SelectValue placeholder="Seleccione una unidad" />
+                            </SelectTrigger>
                             <SelectContent>
-                              {units.map(u => (
-                                <SelectItem key={u.id} value={u.id}>{u.name} ({u.symbol})</SelectItem>
-                              ))}
+                              {units.length > 0 ? (
+                                units.map(u => (
+                                  <SelectItem key={u.id} value={u.id}>{u.name} ({u.symbol})</SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="loading" disabled>Cargando unidades...</SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
+                          {fieldErrors.unit_id && (
+                            <p className="text-xs text-red-500 mt-1">⚠️ {fieldErrors.unit_id}</p>
+                          )}
                         </div>
                         <div>
                           <Label className="text-negro-100 font-raleway-medium-14pt">Mínimo</Label>
@@ -924,31 +1030,55 @@ export default function AdminServicesPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
                     <div>
-                      <Label htmlFor="address" className="text-negro-100 font-raleway-medium-14pt">Dirección</Label>
+                      <Label htmlFor="address" className="text-negro-100 font-raleway-medium-14pt">Dirección (Opcional)</Label>
                       <Input
                         id="address"
                         value={formData.address}
-                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                        className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, address: e.target.value }));
+                          if (fieldErrors.address) {
+                            setFieldErrors(prev => ({ ...prev, address: '' }));
+                          }
+                        }}
+                        className={`${fieldErrors.address ? 'border-red-500' : 'border-grisprimario-10'} focus:border-verdeprimario-100`}
                       />
+                      {fieldErrors.address && (
+                        <p className="text-xs text-red-500 mt-1">⚠️ {fieldErrors.address}</p>
+                      )}
                     </div>
                     <div>
-                      <Label htmlFor="city" className="text-negro-100 font-raleway-medium-14pt">Ciudad</Label>
+                      <Label htmlFor="city" className="text-negro-100 font-raleway-medium-14pt">Ciudad (Opcional)</Label>
                       <Input
                         id="city"
                         value={formData.city}
-                        onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                        className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, city: e.target.value }));
+                          if (fieldErrors.city) {
+                            setFieldErrors(prev => ({ ...prev, city: '' }));
+                          }
+                        }}
+                        className={`${fieldErrors.city ? 'border-red-500' : 'border-grisprimario-10'} focus:border-verdeprimario-100`}
                       />
+                      {fieldErrors.city && (
+                        <p className="text-xs text-red-500 mt-1">⚠️ {fieldErrors.city}</p>
+                      )}
                     </div>
                     <div>
-                      <Label htmlFor="department" className="text-negro-100 font-raleway-medium-14pt">Departamento</Label>
+                      <Label htmlFor="department" className="text-negro-100 font-raleway-medium-14pt">Departamento (Opcional)</Label>
                       <Input
                         id="department"
                         value={formData.department}
-                        onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-                        className="border-grisprimario-10 focus:border-verdeprimario-100"
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, department: e.target.value }));
+                          if (fieldErrors.department) {
+                            setFieldErrors(prev => ({ ...prev, department: '' }));
+                          }
+                        }}
+                        className={`${fieldErrors.department ? 'border-red-500' : 'border-grisprimario-10'} focus:border-verdeprimario-100`}
                       />
+                      {fieldErrors.department && (
+                        <p className="text-xs text-red-500 mt-1">⚠️ {fieldErrors.department}</p>
+                      )}
                     </div>
                   </div>
 
@@ -1333,13 +1463,17 @@ export default function AdminServicesPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-negro-100 font-raleway-medium-14pt">Unidad</Label>
+                      <Label className="text-negro-100 font-raleway-medium-14pt">Unidad *</Label>
                       <Select value={formData.unit_id} onValueChange={(v)=> setFormData(prev=>({...prev, unit_id: v}))}>
-                        <SelectTrigger className="border-grisprimario-10 focus:border-verdeprimario-100"><SelectValue placeholder="Unidad" /></SelectTrigger>
+                        <SelectTrigger className="border-grisprimario-10 focus:border-verdeprimario-100"><SelectValue placeholder="Seleccione una unidad" /></SelectTrigger>
                         <SelectContent>
-                          {units.map(u => (
-                            <SelectItem key={u.id} value={u.id}>{u.name} ({u.symbol})</SelectItem>
-                          ))}
+                          {units.length > 0 ? (
+                            units.map(u => (
+                              <SelectItem key={u.id} value={u.id}>{u.name} ({u.symbol})</SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="loading" disabled>Cargando unidades...</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

@@ -4,20 +4,21 @@ import { logger } from '../config/logger';
 export interface CreateServiceData {
   title: string;
   description: string;
-  price: number;
+  categoryId: string;
+  userId: string;
+  // Optional fields
+  price?: number;
   priceMin?: number;
   priceMax?: number;
   priceCurrency?: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
   mapZoom?: number;
   radius?: number;
-  address: string;
-  city: string;
-  department: string;
-  categoryId: string;
-  unit_id: string;
-  userId: string;
+  address?: string;
+  city?: string;
+  department?: string;
+  unit_id?: string;
 }
 
 export interface UpdateServiceData {
@@ -103,24 +104,53 @@ export interface ServiceWithDetails {
 export class ServiceService {
   async createService(data: CreateServiceData): Promise<ServiceWithDetails> {
     try {
+      console.log('ServiceService.createService - Input data:', data);
+      
+      // Ensure default unit exists, or get the first available unit
+      let finalUnitId = data.unit_id;
+      if (!finalUnitId) {
+        // Try to use default unit
+        const defaultUnit = await prisma.units.findUnique({ where: { id: 'unit-hour' } });
+        if (defaultUnit) {
+          finalUnitId = 'unit-hour';
+        } else {
+          // If default doesn't exist, get first available unit
+          const firstUnit = await prisma.units.findFirst({ where: { is_active: true } });
+          if (!firstUnit) {
+            throw new Error('No hay unidades disponibles. Por favor, ejecute el seed de la base de datos.');
+          }
+          finalUnitId = firstUnit.id;
+        }
+        console.log('Using default unit_id:', finalUnitId);
+      }
+      
+      // Build create data object with all required database fields
+      // Note: Schema requires these fields to be NOT NULL
       const createData: any = {
+        // Required fields
         title: data.title,
         description: data.description,
-        price: data.price,
-        priceMin: data.priceMin,
-        priceMax: data.priceMax,
-        priceCurrency: data.priceCurrency,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        mapZoom: data.mapZoom ?? 6,
-        radius: data.radius,
-        address: data.address,
-        city: data.city,
-        department: data.department,
         categoryId: data.categoryId,
-        unit_id: data.unit_id,
-        userId: data.userId
+        userId: data.userId,
+        
+        // Database-required fields with defaults
+        price: (data.price !== undefined && data.price !== null) ? Number(data.price) : 0,
+        priceCurrency: data.priceCurrency || 'UYU',
+        latitude: (data.latitude !== undefined && data.latitude !== null) ? Number(data.latitude) : -32.5228,
+        longitude: (data.longitude !== undefined && data.longitude !== null) ? Number(data.longitude) : -55.7658,
+        mapZoom: (data.mapZoom !== undefined && data.mapZoom !== null) ? Number(data.mapZoom) : 6,
+        address: data.address || '',
+        city: data.city || '',
+        department: data.department || '',
+        unit_id: finalUnitId, // Validated unit_id
+        
+        // Truly optional fields (nullable in DB)
+        priceMin: (data.priceMin !== undefined && data.priceMin !== null) ? Number(data.priceMin) : null,
+        priceMax: (data.priceMax !== undefined && data.priceMax !== null) ? Number(data.priceMax) : null,
+        radius: (data.radius !== undefined && data.radius !== null) ? Number(data.radius) : null
       };
+      
+      console.log('ServiceService.createService - Create data:', createData);
 
       const service = await prisma.service.create({
         data: createData,
@@ -154,10 +184,16 @@ export class ServiceService {
         }
       });
 
+      console.log('✅ Service created in database:', service.id);
+      
       const serviceWithStats = await this.addServiceStats(service);
       logger.info(`Service created: ${service.id}`);
       return serviceWithStats;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ ServiceService.createService ERROR:');
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
+      console.error('Error details:', error);
       logger.error('Error creating service:', error);
       throw error;
     }

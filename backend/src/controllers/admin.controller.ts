@@ -1177,6 +1177,12 @@ export class AdminController {
    */
   public createService = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('CREATE SERVICE REQUEST');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
       const userId = req.user?.id as string;
       const {
         title,
@@ -1198,41 +1204,54 @@ export class AdminController {
         schedule,
         subBadges = []
       } = req.body as any;
-      // Pre-validate FK references to avoid Prisma P2003
-      const [category, unit] = await Promise.all([
-        prisma.category.findUnique({ where: { id: String(categoryId) } }),
-        prisma.units.findUnique({ where: { id: String(unit_id) } })
-      ]);
+      
+      console.log('Extracted fields:', {
+        title, description, categoryId, unit_id, price, address, city, department, schedule
+      });
+      
+      // Pre-validate required FK references (only category is required now)
+      const category = await prisma.category.findUnique({ where: { id: String(categoryId) } });
       if (!category) {
-        res.status(400).json({ success: false, error: { code: 'INVALID_CATEGORY', message: 'categoryId does not exist' } });
+        res.status(400).json({ success: false, error: { code: 'INVALID_CATEGORY', message: 'La categoría no existe' } });
         return;
       }
-      if (!unit) {
-        res.status(400).json({ success: false, error: { code: 'INVALID_UNIT', message: 'unit_id does not exist' } });
-        return;
+      
+      // Validate unit if provided
+      if (unit_id) {
+        const unit = await prisma.units.findUnique({ where: { id: String(unit_id) } });
+        if (!unit) {
+          res.status(400).json({ success: false, error: { code: 'INVALID_UNIT', message: 'La unidad seleccionada no existe' } });
+          return;
+        }
       }
+      
       // Use service layer to avoid schema/type mismatches
       const { ServiceService } = await import('../services/service.service');
       const serviceService = new ServiceService();
 
+      console.log('Creating service with processed data...');
+      
       const created = await serviceService.createService({
         title: String(title),
         description: String(description),
-        price: Number(price),
-        priceMin: priceMin !== undefined ? Number(priceMin) : undefined,
-        priceMax: priceMax !== undefined ? Number(priceMax) : undefined,
-        priceCurrency: priceCurrency ? String(priceCurrency) : undefined,
-        latitude: Number(latitude),
-        longitude: Number(longitude),
-        mapZoom: mapZoom !== undefined ? Number(mapZoom) : 6,
-        radius: radius !== undefined && radius !== null ? Number(radius) : undefined,
-        address: String(address),
-        city: String(city),
-        department: String(department),
         categoryId: String(categoryId),
-        unit_id: String(unit_id),
-        userId
+        userId,
+        // Optional fields - only include if provided
+        price: (price !== undefined && price !== null && price !== '') ? Number(price) : undefined,
+        priceMin: (priceMin !== undefined && priceMin !== null && priceMin !== '') ? Number(priceMin) : undefined,
+        priceMax: (priceMax !== undefined && priceMax !== null && priceMax !== '') ? Number(priceMax) : undefined,
+        priceCurrency: priceCurrency || undefined,
+        latitude: (latitude !== undefined && latitude !== null && latitude !== '' && latitude !== 0) ? Number(latitude) : undefined,
+        longitude: (longitude !== undefined && longitude !== null && longitude !== '' && longitude !== 0) ? Number(longitude) : undefined,
+        mapZoom: (mapZoom !== undefined && mapZoom !== null && mapZoom !== '') ? Number(mapZoom) : undefined,
+        radius: (radius !== undefined && radius !== null && radius !== '' && radius !== 0) ? Number(radius) : undefined,
+        address: (address && String(address).trim() !== '') ? String(address) : undefined,
+        city: (city && String(city).trim() !== '') ? String(city) : undefined,
+        department: (department && String(department).trim() !== '') ? String(department) : undefined,
+        unit_id: (unit_id && String(unit_id).trim() !== '') ? String(unit_id) : undefined
       });
+      
+      console.log('✅ Service created successfully:', created.id);
 
       // Create images if provided
       if (Array.isArray(images) && images.length > 0) {
@@ -1301,19 +1320,38 @@ export class AdminController {
 
       res.status(201).json({ success: true, data: result });
     } catch (error: any) {
-      console.error('Error creating service:', error);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('ERROR CREATING SERVICE');
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('Error object:', error);
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
+      console.error('Error stack:', error?.stack);
+      console.error('Error meta:', error?.meta);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
       if (error?.code === 'P2003') {
         const fieldName = error?.meta?.field_name as string | undefined;
         if (fieldName && fieldName.includes('services_unit_id_fkey')) {
-          res.status(400).json({ success: false, error: { code: 'INVALID_UNIT', message: 'unit_id does not exist' } });
+          res.status(400).json({ success: false, error: { code: 'INVALID_UNIT', message: 'La unidad seleccionada no existe' } });
           return;
         }
         if (fieldName && fieldName.includes('services_category_id_fkey')) {
-          res.status(400).json({ success: false, error: { code: 'INVALID_CATEGORY', message: 'categoryId does not exist' } });
+          res.status(400).json({ success: false, error: { code: 'INVALID_CATEGORY', message: 'La categoría seleccionada no existe' } });
           return;
         }
       }
-      res.status(500).json({ success: false, error: { code: 'SERVICE_CREATE_ERROR', message: 'Error creating service' } });
+      
+      // Return more detailed error message
+      const errorMessage = error?.message || 'Error al crear el servicio';
+      res.status(500).json({ 
+        success: false, 
+        error: { 
+          code: 'SERVICE_CREATE_ERROR', 
+          message: errorMessage,
+          details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+        } 
+      });
     }
   };
 

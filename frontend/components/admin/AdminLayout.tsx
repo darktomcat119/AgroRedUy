@@ -22,6 +22,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import { DynamicNavigation } from '@/components/DynamicNavigation';
+import { Toaster } from 'react-hot-toast';
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -250,6 +251,46 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {children}
         </div>
       </div>
+      
+      {/* Toast Notifications */}
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+            fontWeight: '500',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            fontSize: '14px',
+          },
+          success: {
+            duration: 4000,
+            style: {
+              background: '#10B981',
+              color: '#fff',
+              fontWeight: '500',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              fontSize: '14px',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+            },
+          },
+          error: {
+            duration: 5000,
+            style: {
+              background: '#EF4444',
+              color: '#fff',
+              fontWeight: '500',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              fontSize: '14px',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
+            },
+          },
+        }}
+      />
     </div>
   );
 }
