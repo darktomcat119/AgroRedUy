@@ -306,7 +306,7 @@ export class AdminController {
           success: false,
           error: {
             code: 'USER_EXISTS',
-            message: 'User already exists with this email'
+            message: 'Ya existe un usuario con este correo electrónico'
           }
         });
         return;
@@ -467,7 +467,14 @@ export class AdminController {
     try {
       updateData = { ...req.body };
 
-      console.log('Update user request:', { id, updateData });
+      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('👨‍💼 ADMIN UPDATE USER REQUEST DEBUG');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('Target User ID:', id);
+      console.log('Admin User:', req.user?.email);
+      console.log('Admin Role:', req.user?.role);
+      console.log('Received Update Data:', JSON.stringify(updateData, null, 2));
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
       // Remove fields that shouldn't be updated directly
       delete updateData.id;
@@ -482,13 +489,26 @@ export class AdminController {
       }
 
       // Normalize dateOfBirth to a valid Date or null
+      console.log('📅 Processing dateOfBirth field...');
+      console.log('   Raw value:', updateData.dateOfBirth);
+      console.log('   Type:', typeof updateData.dateOfBirth);
+      
       if (typeof updateData.dateOfBirth !== 'undefined') {
         if (typeof updateData.dateOfBirth === 'string' && updateData.dateOfBirth.trim() !== '') {
           const parsed = new Date(updateData.dateOfBirth);
+          console.log('   Parsed Date:', parsed);
+          console.log('   Is Valid:', !isNaN(parsed.getTime()));
+          
           if (!isNaN(parsed.getTime())) {
             updateData.dateOfBirth = parsed;
+            console.log('   ✅ Valid date - using:', updateData.dateOfBirth);
           } else {
             // Invalid date string; respond with 400
+            console.log('   ❌ INVALID DATE FORMAT!');
+            console.log('   Expected: ISO date (e.g., 2025-10-15 or 2025-10-15T00:00:00Z)');
+            console.log('   Received:', updateData.dateOfBirth);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+            
             res.status(400).json({
               success: false,
               error: {
@@ -500,11 +520,26 @@ export class AdminController {
           }
         } else {
           updateData.dateOfBirth = null;
+          console.log('   ℹ️  Empty dateOfBirth - setting to null');
         }
       }
 
+      // Convert address from string to array (schema expects String[])
+      if (typeof updateData.address === 'string') {
+        if (updateData.address.trim() === '') {
+          updateData.address = [];
+          console.log('   ℹ️  Empty address - setting to empty array');
+        } else {
+          updateData.address = [updateData.address];
+          console.log('   ✅ Converted address string to array:', updateData.address);
+        }
+      } else if (updateData.address === null || updateData.address === undefined) {
+        updateData.address = [];
+        console.log('   ℹ️  Null address - setting to empty array');
+      }
+
       // Convert empty optional strings to null
-      const optionalStrings = ['phone','address','city','department','gender','occupation','company','profileImageUrl','interests'];
+      const optionalStrings = ['phone','city','department','gender','occupation','company','profileImageUrl'];
       for (const key of optionalStrings) {
         if (Object.prototype.hasOwnProperty.call(updateData, key) && typeof updateData[key] === 'string' && updateData[key].trim() === '') {
           updateData[key] = null;
@@ -539,7 +574,8 @@ export class AdminController {
         }
       }
 
-      console.log('Processed update data:', updateData);
+      console.log('✅ Validation complete. Processed update data:', JSON.stringify(updateData, null, 2));
+      console.log('📝 Updating user in database...\n');
 
       const user = await prisma.user.update({
         where: { id },
@@ -567,15 +603,28 @@ export class AdminController {
         }
       });
 
+      console.log('✅ USER UPDATE SUCCESSFUL!');
+      console.log('Updated fields:', Object.keys(updateData));
+      console.log('Profile Image URL:', user.profileImageUrl);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
       res.json({
         success: true,
         data: user,
         message: 'User updated successfully'
       });
     } catch (error) {
-      console.error('Error updating user:', error);
-      console.error('Update data:', updateData);
+      console.log('❌ USER UPDATE ERROR!');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('Error Type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('Error Message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Update Data:', JSON.stringify(updateData, null, 2));
       console.error('User ID:', id);
+      if (error instanceof Error && error.stack) {
+        console.error('Stack Trace:', error.stack);
+      }
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      
       res.status(500).json({
         success: false,
         error: {

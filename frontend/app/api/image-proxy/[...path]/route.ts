@@ -6,14 +6,22 @@ export async function GET(
 ) {
   try {
     const imagePath = params.path.join('/');
-    // Use NEXT_PUBLIC_API_URL without /api/v1 suffix, or BACKEND_URL, or fallback to localhost
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'http://localhost:3003';
+    
+    // For production, use Railway backend URL directly
+    // Construct the full image URL
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api/v1';
     const backendUrl = apiUrl.replace('/api/v1', ''); // Remove /api/v1 if present
     const imageUrl = `${backendUrl}/uploads/${imagePath}`;
     
     console.log('Proxying image request:', imageUrl);
     
-    const response = await fetch(imageUrl);
+    // Fetch the image from backend
+    const response = await fetch(imageUrl, {
+      headers: {
+        'User-Agent': 'Vercel-Image-Proxy', 
+      },
+      cache: 'no-store', // Don't cache the fetch request
+    });
     
     if (!response.ok) {
       console.error('Backend image request failed:', response.status, response.statusText);

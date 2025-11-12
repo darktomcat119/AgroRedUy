@@ -10,6 +10,8 @@ import Link from "next/link";
 import { apiClient } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import toast from "@/lib/toast";
+import { AvatarUpload } from "@/components/AvatarUpload";
+import { UploadResult } from "@/lib/fileUpload";
 import { 
   User, 
   Mail, 
@@ -21,7 +23,7 @@ import {
   Award
 } from "lucide-react";
 
-export default function RegisterContractorPage(): JSX.Element {
+export default function RegisterProducerPage(): JSX.Element {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -41,9 +43,11 @@ export default function RegisterContractorPage(): JSX.Element {
     businessCity: "",
     businessDepartment: "",
     certifications: [] as string[],
-    yearsExperience: ""
+    yearsExperience: "",
+    avatar: ""
   });
 
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -83,6 +87,27 @@ export default function RegisterContractorPage(): JSX.Element {
       ...prev,
       certifications: prev.certifications.filter((_, i) => i !== index)
     }));
+  };
+
+  const handleAvatarUpload = (result: UploadResult) => {
+    if (result.success) {
+      setFormData(prev => ({
+        ...prev,
+        avatar: result.url || ""
+      }));
+    }
+  };
+
+  const handleAvatarFileSelect = (file: File) => {
+    setAvatarFile(file);
+  };
+
+  const handleAvatarRemove = () => {
+    setFormData(prev => ({
+      ...prev,
+      avatar: ""
+    }));
+    setAvatarFile(null);
   };
 
   const validateCurrentStep = () => {
@@ -223,18 +248,41 @@ export default function RegisterContractorPage(): JSX.Element {
     setIsLoading(true);
     
     try {
-      const { confirmPassword, ...contractorData } = formData;
-      console.log('Sending contractor registration data (ADMIN role):', contractorData);
+      const { confirmPassword, avatar, ...producerData } = formData;
+      console.log('Sending producer registration data (USER role):', producerData);
       
-      // Register as contractor (ADMIN role)
-      const response = await apiClient.register({
-        ...contractorData,
-        yearsExperience: contractorData.yearsExperience ? parseInt(contractorData.yearsExperience) : undefined,
-        certifications: contractorData.certifications.filter(cert => cert.trim() !== "")
+      // Register as producer (USER role)
+      const response = await apiClient.registerContractor({
+        ...producerData,
+        yearsExperience: producerData.yearsExperience ? parseInt(producerData.yearsExperience) : undefined,
+        certifications: producerData.certifications.filter(cert => cert.trim() !== "")
       });
-      console.log('Contractor registration response:', response);
+      console.log('Producer registration response:', response);
 
       if (response.success) {
+        // Upload avatar if file was selected
+        const accessToken = (response.data as any)?.accessToken;
+        if (avatarFile && accessToken) {
+          try {
+            console.log('Uploading avatar after registration...');
+            const { fileUploadService } = await import('@/lib/fileUpload');
+            const avatarResult = await fileUploadService.uploadAvatar(
+              avatarFile,
+              accessToken
+            );
+            
+            if (avatarResult.success) {
+              console.log('Avatar uploaded successfully:', avatarResult.url);
+            } else {
+              console.warn('Avatar upload failed:', avatarResult.error);
+              // Don't fail registration if avatar upload fails
+            }
+          } catch (avatarError) {
+            console.error('Error uploading avatar:', avatarError);
+            // Don't fail registration if avatar upload fails
+          }
+        }
+        
         // Check if email verification is required
         const requiresVerification = (response.data as any)?.requiresEmailVerification;
         
@@ -246,8 +294,8 @@ export default function RegisterContractorPage(): JSX.Element {
           }, 1500);
         } else {
           // Redirect to login page
-          console.log('Contractor registration successful - redirecting to login page');
-          toast.success("¡Registro exitoso como contratista! Por favor inicia sesión.");
+          console.log('Producer registration successful - redirecting to login page');
+          toast.success("¡Registro exitoso como productor! Por favor inicia sesión.");
           setTimeout(() => {
             router.push("/login?email=" + encodeURIComponent(formData.email));
           }, 1500);
@@ -256,7 +304,7 @@ export default function RegisterContractorPage(): JSX.Element {
         // Handle validation errors with details
         const error = response.error;
         const errorMessage = error?.message || "Error al registrar";
-        console.error('Contractor registration failed:', error);
+        console.error('Producer registration failed:', error);
         
         // If there are detailed validation errors, show the first one or all
         if (error?.details && Array.isArray(error.details) && error.details.length > 0) {
@@ -269,7 +317,7 @@ export default function RegisterContractorPage(): JSX.Element {
         }
       }
     } catch (error) {
-      console.error('Contractor registration exception:', error);
+      console.error('Producer registration exception:', error);
       const errorMessage = "Error de conexión. Intenta nuevamente.";
       toast.error(errorMessage);
       setErrors({ general: errorMessage });
@@ -284,15 +332,15 @@ export default function RegisterContractorPage(): JSX.Element {
       <div className="w-[600px] h-screen relative flex-shrink-0 rounded-tr-[100px] rounded-br-[100px] overflow-hidden">
         <img
           className="w-full h-full object-cover"
-          alt="Contratista agrícola"
+          alt="Productor agrícola"
           src="/figmaAssets/atomo-foto-4.png"
         />
       </div>
 
-      {/* Right Section - Contractor Registration Form */}
+      {/* Right Section - Producer Registration Form */}
       <div className="flex-1 bg-white rounded-l-[100px] p-8 flex flex-col justify-center items-center overflow-y-auto">
         <h1 className="text-5xl font-bold text-verdeprimario-100 mb-8 text-center font-barlow-bold-64pt">
-          Registro de Contratista
+          Registro de Productor
         </h1>
 
         {/* Progress Indicator */}
@@ -337,6 +385,24 @@ export default function RegisterContractorPage(): JSX.Element {
               <h3 className="text-2xl font-semibold text-verdeprimario-100 mb-6 text-center">
                 Información Personal
               </h3>
+              
+              {/* Avatar Upload */}
+              <div className="flex flex-col items-center mb-6">
+                <Label className="text-verdeprimario-100 font-medium mb-3 text-center">
+                  Foto de Perfil (Opcional)
+                </Label>
+                <AvatarUpload
+                  currentAvatar={formData.avatar}
+                  onUpload={handleAvatarUpload}
+                  onFileSelect={handleAvatarFileSelect}
+                  onRemove={handleAvatarRemove}
+                  requireAuth={false}
+                  size="lg"
+                />
+                <p className="text-sm text-verdeprimario-100 mt-2 text-center opacity-75">
+                  Sube una imagen para tu perfil de productor
+                </p>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -662,12 +728,26 @@ export default function RegisterContractorPage(): JSX.Element {
                 <h4 className="text-lg font-semibold text-verdeprimario-100 mb-3">
                   Resumen de tu información
                 </h4>
+                
+                {/* Show avatar preview if uploaded */}
+                {formData.avatar && (
+                  <div className="flex justify-center mb-4">
+                    <img 
+                      src={formData.avatar} 
+                      alt="Avatar preview" 
+                      className="w-20 h-20 rounded-full object-cover border-2 border-verdeprimario-100"
+                    />
+                  </div>
+                )}
+                
                 <div className="space-y-2 text-sm text-verdeprimario-100">
                   <p><strong>Nombre:</strong> {formData.firstName} {formData.lastName}</p>
                   <p><strong>Email:</strong> {formData.email}</p>
                   <p><strong>Teléfono:</strong> {formData.phone}</p>
-                  <p><strong>Negocio:</strong> {formData.businessName}</p>
-                  <p><strong>Ubicación:</strong> {formData.businessAddress}, {formData.businessCity}, {formData.businessDepartment}</p>
+                  {formData.businessName && <p><strong>Negocio:</strong> {formData.businessName}</p>}
+                  {(formData.businessAddress || formData.businessCity || formData.businessDepartment) && (
+                    <p><strong>Ubicación:</strong> {[formData.businessAddress, formData.businessCity, formData.businessDepartment].filter(Boolean).join(", ")}</p>
+                  )}
                   {formData.yearsExperience && <p><strong>Experiencia:</strong> {formData.yearsExperience} años</p>}
                   {formData.certifications.filter(cert => cert.trim() !== "").length > 0 && (
                     <p><strong>Certificaciones:</strong> {formData.certifications.filter(cert => cert.trim() !== "").join(", ")}</p>

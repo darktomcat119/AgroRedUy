@@ -219,7 +219,7 @@ export const DynamicNavigation: React.FC<DynamicNavigationProps> = ({
                 {user?.profileImageUrl && user.profileImageUrl.trim() !== '' && !imageLoadError ? (
                   <>
                     <img
-                      src={`/api/image-proxy?url=${encodeURIComponent(user.profileImageUrl)}`}
+                      src={getImageUrl(user.profileImageUrl)}
                       alt="Profile"
                       className="w-8 h-8 rounded-full object-cover"
                       onLoad={() => {

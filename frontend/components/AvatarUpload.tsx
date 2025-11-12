@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { fileUploadService, UploadResult } from '@/lib/fileUpload';
 import { useAuth } from '@/lib/auth';
 import { Camera, Upload, X, Loader2 } from 'lucide-react';
-import Image from 'next/image';
 import { getImageUrl } from '@/lib/utils';
 
 interface AvatarUploadProps {
@@ -152,11 +151,10 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         onClick={handleClick}
       >
         {displayUrl ? (
-          <Image
+          <img
             src={displayUrl}
             alt="Avatar preview"
-            fill
-            className="rounded-full object-cover"
+            className="absolute inset-0 w-full h-full rounded-full object-cover"
             onError={() => setError('Failed to load image')}
           />
         ) : (

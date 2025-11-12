@@ -56,7 +56,20 @@ export function ServiceMap({
           }
         }}
       >
-        <Marker anchor={center} width={40} />
+        <Marker 
+          anchor={center} 
+          width={50}
+        >
+          <img 
+            src="/figmaAssets/position-mark.png" 
+            alt="Location marker"
+            width={50}
+            height={50}
+            style={{
+              cursor: 'pointer'
+            }}
+          />
+        </Marker>
       </Map>
     </div>
   );

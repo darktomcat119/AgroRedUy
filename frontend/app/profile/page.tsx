@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { toast, Toaster } from 'react-hot-toast';
@@ -38,7 +38,7 @@ interface UserProfile {
   createdAt: string;
 }
 
-export default function ProfilePage() {
+function ProfileContent() {
   const { user, updateUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -699,6 +699,18 @@ export default function ProfilePage() {
       </div>
       <Toaster position="top-right" />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-verdeprimario-100 border-t-transparent rounded-full"></div>
+      </div>
+    }>
+      <ProfileContent />
+    </Suspense>
   );
 }
 

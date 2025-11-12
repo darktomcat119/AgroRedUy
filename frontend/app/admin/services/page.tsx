@@ -1222,7 +1222,7 @@ export default function AdminServicesPage() {
                     {(selectedService as any).images.map((img: any) => (
                       <img 
                         key={img.id} 
-                        src={`/api/image-proxy?url=${encodeURIComponent(img.imageUrl)}`} 
+                        src={img.imageUrl} 
                         alt="Service image" 
                         className="w-full h-28 object-cover rounded-md border border-grisprimario-10" 
                       />

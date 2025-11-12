@@ -22,9 +22,12 @@ export class AuthController {
    */
   public register = async (req: Request, res: Response): Promise<void> => {
     try {
-      console.log('Received registration data:', req.body);
+      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('👷 CONTRACTOR REGISTRATION DEBUG (ADMIN role)');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('Received registration data:', JSON.stringify(req.body, null, 2));
       
-      const { 
+      let { 
         email, 
         password, 
         firstName, 
@@ -41,10 +44,20 @@ export class AuthController {
         newsletter
       } = req.body;
       
-      console.log('Extracted fields:', {
+      // Convert address from string to array (schema expects String[])
+      if (typeof address === 'string') {
+        address = address.trim() === '' ? [] : [address];
+        console.log('✅ Converted address string to array:', address);
+      } else if (!address) {
+        address = [];
+        console.log('ℹ️  No address provided - using empty array');
+      }
+      
+      console.log('Processed fields:', {
         email, firstName, lastName, phone, address, city, department, 
         dateOfBirth, gender, occupation, company, interests, newsletter
       });
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
       const result = await this.authService.register({
         email,
@@ -87,7 +100,12 @@ export class AuthController {
    */
   public registerContractor = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { 
+      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('🌾 PRODUCER REGISTRATION DEBUG (USER role)');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('Received registration data:', JSON.stringify(req.body, null, 2));
+      
+      let { 
         email, 
         password, 
         firstName, 
@@ -101,6 +119,18 @@ export class AuthController {
         certifications = [],
         yearsExperience
       } = req.body;
+
+      // Convert businessAddress from string to array (user address field expects String[])
+      if (typeof businessAddress === 'string') {
+        businessAddress = businessAddress.trim() === '' ? [] : [businessAddress];
+        console.log('✅ Converted businessAddress string to array:', businessAddress);
+      } else if (!businessAddress) {
+        businessAddress = [];
+        console.log('ℹ️  No businessAddress provided - using empty array');
+      }
+
+      console.log('Processed contractor data');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
       const result = await this.authService.registerContractor({
         email,
@@ -143,9 +173,18 @@ export class AuthController {
     try {
       const { email, password } = req.body;
       
-      console.log('Login attempt:', { email, passwordLength: password?.length });
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('🔐 LOGIN ATTEMPT DEBUG');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('Email:', email);
+      console.log('Password length:', password?.length);
+      console.log('Request body:', req.body);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       const result = await this.authService.login({ email, password });
+
+      console.log('✅ Login successful for:', email);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
       res.json({
         success: true,
@@ -153,12 +192,19 @@ export class AuthController {
         message: 'Login successful'
       });
     } catch (error: any) {
+      console.log('❌ LOGIN FAILED!');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('Error name:', error.name);
+      console.log('Error message:', error.message);
+      console.log('Error stack:', error.stack);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      
       logger.error('Login error:', error);
       res.status(401).json({
         success: false,
         error: {
           code: 'LOGIN_FAILED',
-          message: 'Invalid credentials'
+          message: 'Credenciales inválidas'
         }
       });
     }

@@ -91,7 +91,15 @@ export function MultiImageDropzone({
             <div className="flex items-center gap-2">
               <span>Arrastra y suelta imágenes aquí</span>
               <span className="text-grisprimario-300">o</span>
-              <button type="button" className="px-3 py-1 rounded-full bg-verdeprimario-100 text-white hover:bg-verdeprimario-200" onClick={(e) => { e.preventDefault(); openFilePicker(); }}>
+              <button 
+                type="button" 
+                className="px-3 py-1 rounded-full bg-verdeprimario-100 text-white hover:bg-verdeprimario-200" 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  e.stopPropagation(); // Prevent bubbling to parent div
+                  openFilePicker(); 
+                }}
+              >
                 Seleccionar
               </button>
             </div>
@@ -109,7 +117,7 @@ export function MultiImageDropzone({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {existing.map((img) => (
                 <div key={img.id} className="relative w-full h-24 rounded-md overflow-hidden border border-grisprimario-10 group">
-                  <img src={`/api/image-proxy?url=${encodeURIComponent(img.imageUrl)}`} alt="service-image" className="w-full h-full object-cover" />
+                  <img src={img.imageUrl} alt="service-image" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
                   {onRemoveExisting && (
                     <button

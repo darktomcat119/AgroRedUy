@@ -27,11 +27,11 @@ export interface ContractorRegisterData {
   firstName: string;
   lastName: string;
   phone: string;
-  businessName: string;
-  businessDescription: string;
-  businessAddress: string;
-  businessCity: string;
-  businessDepartment: string;
+  businessName?: string;
+  businessDescription?: string;
+  businessAddress?: string;
+  businessCity?: string;
+  businessDepartment?: string;
   certifications?: string[];
   yearsExperience?: number;
 }
@@ -53,6 +53,7 @@ export interface AuthResult {
   };
   accessToken: string;
   refreshToken: string;
+  requiresEmailVerification?: boolean; // Indicates if email verification is needed
 }
 
 export class AuthService {
@@ -88,24 +89,29 @@ export class AuthService {
       });
 
       if (existingUser) {
-        throw new Error('User already exists with this email');
+        throw new Error('Ya existe un usuario con este correo electrónico');
       }
 
       // Hash password
       const passwordHash = await bcrypt.hash(password, AuthService.SALT_ROUNDS);
 
-      // Generate email verification token
-      const emailVerificationToken = this.generateEmailVerificationToken();
-      const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      // Check if email verification is enabled
+      const emailVerificationEnabled = process.env.EMAIL_VERIFICATION_ENABLED === 'true';
+      console.log('📧 Email Verification Enabled:', emailVerificationEnabled);
+      console.log('👷 Registering CONTRACTOR (ADMIN role)');
 
-      // Prepare user data for database
+      // Generate email verification token only if needed
+      const emailVerificationToken = emailVerificationEnabled ? this.generateEmailVerificationToken() : null;
+      const emailVerificationExpires = emailVerificationEnabled ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null;
+
+      // Prepare user data for database - CONTRACTOR = ADMIN role
       const dbUserData = {
         email,
         passwordHash,
         firstName,
         lastName,
         phone,
-        address: address && address.trim() !== '' ? address : null,
+        address: Array.isArray(address) ? address : (address && address.trim() !== '' ? [address] : []),
         city: city && city.trim() !== '' ? city : null,
         department: department && department.trim() !== '' ? department : null,
         dateOfBirth: dateOfBirth && dateOfBirth.trim() !== '' ? new Date(dateOfBirth) : null,
@@ -114,9 +120,10 @@ export class AuthService {
         company: company && company.trim() !== '' ? company : null,
         interests,
         newsletter,
+        role: 'ADMIN' as any, // Contractors are ADMIN role
         emailVerificationToken,
         emailVerificationExpires,
-        emailVerified: false
+        emailVerified: !emailVerificationEnabled // Auto-verify if verification disabled
       };
       
       console.log('Creating user with data:', dbUserData);
@@ -133,39 +140,33 @@ export class AuthService {
         throw dbError;
       }
 
-      // Send verification email (skip in development)
-      if (process.env.NODE_ENV === 'production') {
+      // Send verification email (only if enabled)
+      if (emailVerificationEnabled) {
         try {
-          await this.emailService.sendVerificationEmail(email, firstName, emailVerificationToken);
-          logger.info(`Verification email sent to: ${email}`);
+          await this.emailService.sendVerificationEmail(email, firstName, emailVerificationToken!);
+          logger.info(`✅ Verification email sent to: ${email}`);
+          console.log('✅ Verification email sent successfully');
         } catch (emailError) {
           logger.error('Failed to send verification email:', emailError);
+          console.log('⚠️  Failed to send verification email - user created but not verified');
           // Don't fail registration if email sending fails
         }
       } else {
-        logger.info(`Development mode: Skipping email verification for ${email}`);
-        // Auto-verify email in development mode
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            emailVerified: true,
-            emailVerificationToken: null,
-            emailVerificationExpires: null
-          } as any
-        });
-        logger.info(`Development mode: Auto-verified email for ${email}`);
+        logger.info(`📧 Email verification disabled - user auto-verified: ${email}`);
+        console.log('✅ Email verification disabled - user auto-verified');
       }
 
       // Generate tokens
       const accessToken = this.generateAccessToken(user);
       const refreshToken = this.generateRefreshToken(user);
 
-      logger.info(`New user registered: ${email} (verification required)`);
+      logger.info(`New contractor registered: ${email} (ADMIN role) ${emailVerificationEnabled ? '(verification required)' : '(auto-verified)'}`);
 
       return {
         user: this.sanitizeUser(user),
         accessToken,
-        refreshToken
+        refreshToken,
+        requiresEmailVerification: emailVerificationEnabled // Tell frontend if verification is needed
       };
     } catch (error) {
       logger.error('Registration error:', error);
@@ -180,8 +181,16 @@ export class AuthService {
         password,
         firstName,
         lastName,
-        phone
+        phone,
+        businessAddress,
+        businessCity,
+        businessDepartment
       } = contractorData;
+
+      console.log('📋 Processing producer registration (USER role)...');
+      console.log('   Business Address:', businessAddress);
+      console.log('   Business City:', businessCity);
+      console.log('   Business Department:', businessDepartment);
 
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
@@ -189,13 +198,27 @@ export class AuthService {
       });
 
       if (existingUser) {
-        throw new Error('User already exists with this email');
+        throw new Error('Ya existe un usuario con este correo electrónico');
       }
 
       // Hash password
       const passwordHash = await bcrypt.hash(password, AuthService.SALT_ROUNDS);
 
-      // Create contractor user
+      // Check if email verification is enabled
+      const emailVerificationEnabled = process.env.EMAIL_VERIFICATION_ENABLED === 'true';
+      console.log('📧 Email Verification Enabled:', emailVerificationEnabled);
+      console.log('🌾 Registering PRODUCER (USER role)');
+
+      // Ensure businessAddress is an array (if provided)
+      const addressArray = businessAddress 
+        ? (Array.isArray(businessAddress) 
+            ? businessAddress 
+            : (businessAddress.trim() !== '' ? [businessAddress] : []))
+        : [];
+
+      console.log('   ✅ Address converted to array:', addressArray);
+
+      // Create producer user with USER role (in this project, PRODUCER = USER)
       const user = await prisma.user.create({
         data: {
           email,
@@ -203,20 +226,31 @@ export class AuthService {
           firstName,
           lastName,
           phone,
-          role: 'CONTRACTOR' as any
+          address: addressArray,
+          city: businessCity && businessCity.trim() !== '' ? businessCity : null,
+          department: businessDepartment && businessDepartment.trim() !== '' ? businessDepartment : null,
+          role: 'USER' as any, // Producers are saved as USER role
+          emailVerified: !emailVerificationEnabled // Auto-verify if verification disabled
         }
       });
+
+      console.log('✅ Producer user created successfully:', user.id);
+      console.log('✅ Role set to: USER (producer)');
+      if (!emailVerificationEnabled) {
+        console.log('✅ Email verification disabled - producer auto-verified');
+      }
 
       // Generate tokens
       const accessToken = this.generateAccessToken(user);
       const refreshToken = this.generateRefreshToken(user);
 
-      logger.info(`New contractor registered: ${email}`);
+      logger.info(`New producer registered: ${email} (USER role) ${emailVerificationEnabled ? '(verification required)' : '(auto-verified)'}`);
 
       return {
         user: this.sanitizeUser(user),
         accessToken,
-        refreshToken
+        refreshToken,
+        requiresEmailVerification: emailVerificationEnabled // Tell frontend if verification is needed
       };
     } catch (error) {
       logger.error('Contractor registration error:', error);
@@ -239,7 +273,7 @@ export class AuthService {
 
       if (!user) {
         console.log('User not found for email:', email);
-        throw new Error('Invalid credentials');
+        throw new Error('Credenciales inválidas');
       }
 
       // Check password
@@ -247,12 +281,12 @@ export class AuthService {
       console.log('Password check result:', isPasswordValid);
       if (!isPasswordValid) {
         console.log('Password invalid for user:', email);
-        throw new Error('Invalid credentials');
+        throw new Error('Credenciales inválidas');
       }
 
       // Check if user is active
       if (!user.isActive) {
-        throw new Error('Account is deactivated');
+        throw new Error('La cuenta está desactivada');
       }
 
       // Update last login

@@ -254,11 +254,13 @@ export default function RegisterPage(): JSX.Element {
     setIsLoading(true);
     
     try {
-      // Prepare user data for registration (exclude confirmPassword and terms)
+      // Prepare contractor data for registration (exclude confirmPassword and terms)
       const { confirmPassword, terms, ...userData } = formData;
-      console.log('Sending registration data:', userData);
+      console.log('Sending contractor registration data (USER role):', userData);
+      
+      // Register as contractor (USER role)
       const response = await apiClient.register(userData);
-      console.log('Registration response:', response);
+      console.log('Contractor registration response:', response);
 
       if (response.success) {
         // Store auth tokens after successful registration
@@ -324,8 +326,22 @@ export default function RegisterPage(): JSX.Element {
           }
         }
         
-        // Redirect to email verification page
-        router.push("/verify-email?email=" + encodeURIComponent(formData.email));
+        // Check if email verification is required
+        const requiresVerification = (response.data as any)?.requiresEmailVerification;
+        
+        if (requiresVerification) {
+          // Redirect to email verification page
+          console.log('Email verification required - redirecting to verify-email page');
+          router.push("/verify-email?email=" + encodeURIComponent(formData.email));
+        } else {
+          // Email verification disabled - redirect to login page
+          console.log('Contractor registration successful - redirecting to login page');
+          toast.success("¡Registro exitoso como contratista! Por favor inicia sesión.");
+          
+          setTimeout(() => {
+            router.push("/login?email=" + encodeURIComponent(formData.email));
+          }, 1500);
+        }
       } else {
         // Handle validation errors from backend
         if (response.error?.code === 'VALIDATION_ERROR' && response.error?.details) {
@@ -384,7 +400,7 @@ export default function RegisterPage(): JSX.Element {
       <div className="flex-1 bg-white rounded-l-[100px] p-8 flex flex-col items-center overflow-y-auto">
         <div className="w-full max-w-2xl pt-8">
           <h1 className="text-5xl font-bold text-verdeprimario-100 mb-8 text-center font-barlow-bold-64pt">
-            Registrarse
+            Registro de Contratista
           </h1>
 
           {/* Progress Indicator */}
@@ -926,9 +942,9 @@ export default function RegisterPage(): JSX.Element {
         {/* Contractor Registration Link */}
         <div className="text-center mt-4">
           <p className="text-verdeprimario-100 font-raleway-medium-16pt">
-            ¿Sos contratista?{" "}
-            <Link href="/register-contractor" className="font-bold text-verdeprimario-100 hover:underline font-raleway-bold-16pt">
-              Registrarse como Contratista
+            ¿Sos productor?{" "}
+            <Link href="/register-producer" className="font-bold text-verdeprimario-100 hover:underline font-raleway-bold-16pt">
+              Registrarse como Productor
             </Link>
           </p>
         </div>
@@ -943,32 +959,6 @@ export default function RegisterPage(): JSX.Element {
           </p>
         </div>
       </div>
-      
-      {/* Toast Notifications */}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            duration: 3000,
-            iconTheme: {
-              primary: '#4ade80',
-              secondary: '#fff',
-            },
-          },
-          error: {
-            duration: 5000,
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
-            },
-          },
-        }}
-      />
     </div>
   );
 }

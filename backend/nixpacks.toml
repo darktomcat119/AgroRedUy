@@ -1,0 +1,18 @@
+[phases.setup]
+# Add vips for Sharp image processing library
+nixPkgs = ['nodejs_20', 'openssl', 'vips']
+
+[phases.install]
+# Install ALL dependencies for building (includes TypeScript)
+# Using npm install (not ci) to avoid cache mount conflicts
+# Rebuild sharp to ensure it works with Railway's environment
+cmds = ['npm install --loglevel=error', 'npm rebuild sharp']
+
+[phases.build]
+# Build the application (includes prisma generate)
+cmds = ['npm run build']
+
+[start]
+# Run migrations, auto-seed if needed, then start server
+cmd = 'npm run deploy'
+

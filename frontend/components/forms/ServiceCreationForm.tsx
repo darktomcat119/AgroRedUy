@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MapPin, DollarSign, Calendar, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import toast from '@/lib/toast';
 
 // Validation schema
 const serviceSchema = z.object({
@@ -127,15 +128,56 @@ export function ServiceCreationForm({ onSuccess, onCancel }: ServiceCreationForm
       const response = await apiClient.createService(data);
 
       if (response.success) {
-        setSuccess('Servicio creado exitosamente');
+        const successMsg = 'Servicio creado exitosamente';
+        setSuccess(successMsg);
+        toast.success(successMsg);
         reset();
         onSuccess?.(response.data);
       } else {
-        setError(response.error?.message || 'Error al crear el servicio');
+        // Log the full error response for debugging
+        console.log('Service creation failed - Full response:', response);
+        console.log('Error object:', response.error);
+        console.log('Error details:', response.error?.details);
+        
+        // Display detailed validation errors if available
+        let errorMessage = response.error?.message || 'Error al crear el servicio';
+        
+        // Check if there are detailed validation errors
+        if (response.error?.details && Array.isArray(response.error.details) && response.error.details.length > 0) {
+          console.log('Found validation details, parsing...');
+          
+          const detailedErrors = response.error.details
+            .map((detail: any) => {
+              // Format: "Field: Error message"
+              const field = detail.path || detail.field || 'Campo';
+              const msg = detail.msg || detail.message || 'Error de validación';
+              console.log(`Parsed detail - Field: ${field}, Message: ${msg}`);
+              return `• ${field}: ${msg}`;
+            })
+            .join('\n');
+          
+          console.log('Detailed errors formatted:', detailedErrors);
+          errorMessage = `Errores de validación:\n\n${detailedErrors}`;
+          
+          // Show each validation error as a separate toast
+          response.error.details.forEach((detail: any) => {
+            const field = detail.path || detail.field || 'Campo';
+            const msg = detail.msg || detail.message || 'Error de validación';
+            toast.error(`${field}: ${msg}`);
+          });
+        } else {
+          // Show general error toast
+          toast.error(errorMessage);
+        }
+        
+        console.log('Final error message to display:', errorMessage);
+        setError(errorMessage);
       }
     } catch (error) {
       console.error('Error creating service:', error);
-      setError('Error inesperado al crear el servicio');
+      const errorMsg = 'Error inesperado al crear el servicio. Por favor, verifica todos los campos e intenta nuevamente.';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -165,7 +207,7 @@ export function ServiceCreationForm({ onSuccess, onCancel }: ServiceCreationForm
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription className="whitespace-pre-line">{error}</AlertDescription>
             </Alert>
           )}
           

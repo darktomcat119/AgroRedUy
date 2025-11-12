@@ -3,7 +3,7 @@
  * Handles all API communication with the backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -126,8 +126,15 @@ class ApiClient {
     company?: string;
     interests?: string[];
     newsletter?: boolean;
+    businessName?: string;
+    businessDescription?: string;
+    businessAddress?: string;
+    businessCity?: string;
+    businessDepartment?: string;
+    certifications?: string[];
+    yearsExperience?: number;
   }) {
-    return this.request('/auth/register', {
+    return this.request('/auth/register-contractor', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -139,15 +146,15 @@ class ApiClient {
     firstName: string;
     lastName: string;
     phone: string;
-    businessName: string;
-    businessDescription: string;
-    businessAddress: string;
-    businessCity: string;
-    businessDepartment: string;
+    businessName?: string;
+    businessDescription?: string;
+    businessAddress?: string;
+    businessCity?: string;
+    businessDepartment?: string;
     certifications?: string[];
     yearsExperience?: number;
   }) {
-    const response = await this.request('/auth/register-contractor', {
+    const response = await this.request('/auth/register-producer', {
       method: 'POST',
       body: JSON.stringify(contractorData),
     });

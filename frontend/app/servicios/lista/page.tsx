@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DynamicNavigation } from "@/components/DynamicNavigation";
@@ -36,7 +36,7 @@ const authItems = [
   { label: "Iniciar Sesión", active: false, href: "/login" },
 ];
 
-export default function ServiciosListaPage(): JSX.Element {
+function ServiciosListaContent(): JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [services, setServices] = useState<PublicServiceItem[]>([]);
@@ -382,5 +382,17 @@ export default function ServiciosListaPage(): JSX.Element {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function ServiciosListaPage(): JSX.Element {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-verdeprimario-100 border-t-transparent rounded-full"></div>
+      </div>
+    }>
+      <ServiciosListaContent />
+    </Suspense>
   );
 }

@@ -990,7 +990,7 @@ export default function AdminUsersPage() {
     {user.profileImageUrl ? (
       <div className="w-10 h-10 rounded-full overflow-hidden">
         <img
-          src={`/api/image-proxy?url=${encodeURIComponent(user.profileImageUrl)}`}
+          src={user.profileImageUrl}
           alt={`${user.firstName} ${user.lastName}`}
           className="w-full h-full object-cover"
           onError={(e) => {

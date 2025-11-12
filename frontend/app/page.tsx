@@ -36,14 +36,14 @@ const userTypes = [
     label: "SOY PRODUCTOR",
     bgColor: "bg-verdesecundario-100",
     hoverColor: "hover:bg-verdeprimario-100",
-    href: "/register?type=producer",
+    href: "/register-producer",
   },
   {
     icon: "/figmaAssets/icono-contratista.svg",
     label: "SOY CONTRATISTA",
     bgColor: "bg-naranja-100",
     hoverColor: "hover:bg-orange-400",
-    href: "/register?type=contractor",
+    href: "/register",
   },
 ];
 

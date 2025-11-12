@@ -8,6 +8,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import passport from 'passport';
 import session from 'express-session';
+import RedisStore from 'connect-redis';
+import { createClient } from 'redis';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -22,6 +24,7 @@ import searchRoutes from './routes/search.routes';
 import mapsRoutes from './routes/maps.routes';
 import notificationRoutes from './routes/notification.routes';
 import scheduleRequestRoutes from './routes/schedule-request.routes';
+import debugRoutes from './routes/debug.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -33,6 +36,14 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env['PORT'] || 3001;
+
+// Trust proxy - Required for Railway, Heroku, AWS, etc.
+// Enables Express to trust X-Forwarded-* headers from reverse proxies
+// This is critical for:
+// - Getting correct client IP addresses
+// - Rate limiting to work properly
+// - HTTPS detection
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet({
@@ -81,22 +92,21 @@ const generalLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for localhost in development (React StrictMode causes duplicate requests)
+  // Skip rate limiting for localhost (React StrictMode causes duplicate requests, also allows local testing in production mode)
   skip: (req) => {
-    const isDevelopment = process.env.NODE_ENV !== 'production';
     const ip = req.ip || req.socket?.remoteAddress || '';
     const isLocalhost = ip === '127.0.0.1' 
       || ip === '::1' 
       || ip === '::ffff:127.0.0.1'
       || ip.includes('localhost')
       || ip.includes('127.0.0.1');
-    return isDevelopment && isLocalhost;
+    return isLocalhost; // Always skip rate limiting for localhost
   }
 });
 
 const authLimiter = rateLimit({
   windowMs: parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '900000'), // 15 minutes
-  max: parseInt(process.env['RATE_LIMIT_AUTH_MAX_REQUESTS'] || '5'),
+  max: parseInt(process.env['RATE_LIMIT_AUTH_MAX_REQUESTS'] || '100'), // Increased for development
   message: {
     success: false,
     error: {
@@ -106,6 +116,16 @@ const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Skip rate limiting for localhost (allows local testing)
+  skip: (req) => {
+    const ip = req.ip || req.socket?.remoteAddress || '';
+    const isLocalhost = ip === '127.0.0.1' 
+      || ip === '::1' 
+      || ip === '::ffff:127.0.0.1'
+      || ip.includes('localhost')
+      || ip.includes('127.0.0.1');
+    return isLocalhost; // Always skip rate limiting for localhost
+  }
 });
 
 // Admin operations rate limiter (more permissive for authenticated admin users)
@@ -121,16 +141,15 @@ const adminLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for localhost in development
+  // Skip rate limiting for localhost (allows local testing in production mode)
   skip: (req) => {
-    const isDevelopment = process.env.NODE_ENV !== 'production';
     const ip = req.ip || req.socket?.remoteAddress || '';
     const isLocalhost = ip === '127.0.0.1' 
       || ip === '::1' 
       || ip === '::ffff:127.0.0.1'
       || ip.includes('localhost')
       || ip.includes('127.0.0.1');
-    return isDevelopment && isLocalhost;
+    return isLocalhost; // Always skip rate limiting for localhost
   }
 });
 
@@ -144,13 +163,54 @@ app.use('/api/v1/schedule-requests', adminLimiter); // Apply admin-specific rate
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Initialize Redis client for session store (production-ready)
+let redisClient: ReturnType<typeof createClient> | undefined;
+let sessionStore: any;
+
+if (process.env.NODE_ENV === 'production' && process.env.REDIS_URL) {
+  try {
+    redisClient = createClient({
+      url: process.env.REDIS_URL,
+      socket: {
+        reconnectStrategy: (retries) => Math.min(retries * 50, 500)
+      }
+    });
+    
+    redisClient.connect().catch((err) => {
+      logger.error('Redis connection error:', err);
+    });
+
+    redisClient.on('error', (err) => {
+      logger.error('Redis Client Error:', err);
+    });
+
+    redisClient.on('connect', () => {
+      logger.info('✅ Redis connected for session storage');
+    });
+
+    sessionStore = new RedisStore({
+      client: redisClient,
+      prefix: 'agrored:sess:',
+    });
+  } catch (error) {
+    logger.warn('Failed to initialize Redis, falling back to MemoryStore:', error);
+    sessionStore = undefined; // Will use default MemoryStore
+  }
+} else {
+  logger.info(process.env.NODE_ENV === 'production' 
+    ? '⚠️  Production mode but REDIS_URL not set - using MemoryStore (not recommended)'
+    : '📝 Development mode - using MemoryStore for sessions');
+}
+
 // Session middleware for OAuth
 app.use(session({
+  store: sessionStore,
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
@@ -187,6 +247,7 @@ app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/maps', mapsRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/schedule-requests', scheduleRequestRoutes);
+app.use('/api/v1/debug', debugRoutes);
 
 // Root endpoint
 app.get('/', (_req, res) => {

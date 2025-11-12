@@ -149,12 +149,54 @@ async function main() {
 
   console.log('✅ Test user created:', testUser.email);
 
+  // Create units
+  const hourUnit = await prisma.units.upsert({
+    where: { name: 'Hora' },
+    update: {},
+    create: {
+      id: 'unit-hour',
+      name: 'Hora',
+      symbol: 'hr',
+      description: 'Precio por hora',
+      is_active: true,
+      updated_at: new Date()
+    }
+  });
+
+  const dayUnit = await prisma.units.upsert({
+    where: { name: 'Día' },
+    update: {},
+    create: {
+      id: 'unit-day',
+      name: 'Día',
+      symbol: 'día',
+      description: 'Precio por día',
+      is_active: true,
+      updated_at: new Date()
+    }
+  });
+
+  const hectareaUnit = await prisma.units.upsert({
+    where: { name: 'Hectárea' },
+    update: {},
+    create: {
+      id: 'unit-hectare',
+      name: 'Hectárea',
+      symbol: 'ha',
+      description: 'Precio por hectárea',
+      is_active: true,
+      updated_at: new Date()
+    }
+  });
+
+  console.log('✅ Units created');
+
   // Create sample services
   const sampleServices = [
     {
       title: 'Cosecha de Soja',
       description: 'Servicio profesional de cosecha de soja con maquinaria moderna y personal especializado.',
-      pricePerHour: 50,
+      price: 50,
       priceMin: 40,
       priceMax: 60,
       latitude: -34.9,
@@ -162,12 +204,13 @@ async function main() {
       address: 'Ruta 5, km 45',
       city: 'Montevideo',
       department: 'Montevideo',
-      categoryId: categories[0].id
+      categoryId: categories[0].id,
+      unit_id: hourUnit.id
     },
     {
       title: 'Siembra de Maíz',
       description: 'Servicio de siembra de maíz con semillas certificadas y fertilización adecuada.',
-      pricePerHour: 45,
+      price: 45,
       priceMin: 35,
       priceMax: 55,
       latitude: -34.8,
@@ -175,12 +218,13 @@ async function main() {
       address: 'Ruta 8, km 120',
       city: 'Canelones',
       department: 'Canelones',
-      categoryId: categories[1].id
+      categoryId: categories[1].id,
+      unit_id: dayUnit.id
     },
     {
       title: 'Fumigación Aérea',
       description: 'Servicio de fumigación aérea para control de plagas y enfermedades.',
-      pricePerHour: 80,
+      price: 80,
       priceMin: 70,
       priceMax: 90,
       latitude: -34.7,
@@ -188,7 +232,8 @@ async function main() {
       address: 'Ruta 1, km 200',
       city: 'Colonia',
       department: 'Colonia',
-      categoryId: categories[2].id
+      categoryId: categories[2].id,
+      unit_id: hectareaUnit.id
     }
   ];
 

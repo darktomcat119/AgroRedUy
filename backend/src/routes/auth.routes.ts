@@ -6,8 +6,8 @@ import { validateRequest } from '../middleware/validation.middleware';
 const router = Router();
 const authController = new AuthController();
 
-// POST /auth/register
-router.post('/register', [
+// POST /auth/register-contractor (Contractor = ADMIN role)
+router.post('/register-contractor', [
   body('email')
     .isEmail()
     .normalizeEmail()
@@ -71,8 +71,8 @@ router.post('/register', [
   validateRequest
 ], authController.register);
 
-// POST /auth/register-contractor
-router.post('/register-contractor', [
+// POST /auth/register-producer (Producer = USER role)
+router.post('/register-producer', [
   body('email')
     .isEmail()
     .normalizeEmail()
@@ -92,22 +92,27 @@ router.post('/register-contractor', [
     .isMobilePhone('any', { strictMode: false })
     .withMessage('Valid phone number is required'),
   body('businessName')
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage('Business name must be between 2 and 100 characters'),
   body('businessDescription')
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ min: 10, max: 500 })
     .withMessage('Business description must be between 10 and 500 characters'),
   body('businessAddress')
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ min: 5, max: 200 })
     .withMessage('Business address must be between 5 and 200 characters'),
   body('businessCity')
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage('Business city must be between 2 and 50 characters'),
   body('businessDepartment')
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage('Business department must be between 2 and 50 characters'),

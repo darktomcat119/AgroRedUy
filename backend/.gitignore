@@ -1,0 +1,18 @@
+.env
+node_modules/
+dist/
+.vscode/
+.DS_Store
+logs/
+CLOUDFLARE_R2_SETUP.md
+npm-debug.log*
+test-api.js
+test-apis.js
+test-email-config.js
+setup.sh
+setup.bat
+
+# Temporary files
+*.temp.*
+*.tmp
+
